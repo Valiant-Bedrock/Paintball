@@ -13,14 +13,58 @@ declare(strict_types=1);
 
 namespace paintball;
 
-use pocketmine\plugin\PluginBase;
+use libgame\GameBase;
+use paintball\game\PaintballGame;
+use pocketmine\command\Command;
+use pocketmine\command\CommandSender;
+use pocketmine\player\Player;
 
-class PaintballBase extends PluginBase {
+// Import dependencies
+require_once dirname(__DIR__, 2) . "/vendor/autoload.php";
+
+class PaintballBase extends GameBase {
+
+	protected ?PaintballGame $defaultGame = null;
 
 	protected function onEnable() : void {
+		$this->getServer()->getWorldManager()->loadWorld("paintball_test", true);
+		$this->getServer()->getPluginManager()->registerEvents(
+			listener: new PaintballListener($this),
+			plugin: $this
+		);
 	}
 
 	protected function onDisable() : void {
+
 	}
 
+	public function getDefaultGame(): ?PaintballGame {
+		return $this->defaultGame;
+	}
+
+	public function setDefaultGame(?PaintballGame $game): void {
+		$this->defaultGame = $game;
+	}
+
+	public function hasDefaultGame(): bool {
+		return $this->defaultGame instanceof PaintballGame;
+	}
+
+	public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
+		switch(strtolower($label)) {
+			case "start":
+				if(!$sender instanceof Player) {
+					$sender->sendMessage("You must be a player to use this command.");
+					return true;
+				}
+				if(!$this->hasDefaultGame()) {
+					$sender->sendMessage("There is no default game set.");
+					return true;
+				}
+
+				$this->getDefaultGame()->start();
+				return true;
+		}
+		return true;
+	}
 }
