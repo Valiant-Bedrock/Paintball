@@ -28,7 +28,7 @@ class PaintballListener implements Listener {
 	public function __construct(protected PaintballBase $plugin) {}
 
 	public function handleJoin(PlayerJoinEvent $event): void {
-		$world = $this->plugin->getServer()->getWorldManager()->getWorldByName("paintball_test");
+		$world = $this->plugin->getServer()->getWorldManager()->getWorldByName("paintball_test") ?? throw new AssumptionFailedError("World not found");
 
 		if(!$this->plugin->hasDefaultGame()) {
 			$game = new PaintballGame(
@@ -46,7 +46,7 @@ class PaintballListener implements Listener {
 		$game->handleJoin($event->getPlayer());
 	}
 
-	public function handleEntityDamage(EntityDamageEvent $event) {
+	public function handleEntityDamage(EntityDamageEvent $event): void {
 		$entity = $event->getEntity();
 		if(!$entity instanceof Player) {
 			return;

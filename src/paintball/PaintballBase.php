@@ -62,7 +62,7 @@ class PaintballBase extends GameBase {
 					return true;
 				}
 
-				$this->getDefaultGame()->start();
+				$this->getDefaultGame()?->start();
 				return true;
 		}
 		return true;

@@ -18,13 +18,10 @@ use paintball\game\PaintballGame;
 use paintball\item\CustomItems;
 use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
+use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
 
 class InGameStateHandler extends GameStateHandler {
-
-	public function getGame(): PaintballGame {
-		return $this->game;
-	}
 
 	public function handleSetup(): void {
 		$this->getGame()->executeOnAll(function(Player $player): void {
@@ -46,9 +43,11 @@ class InGameStateHandler extends GameStateHandler {
 	}
 
 	public function handleTick(int $currentStateTime): void {
-		$round = $this->getGame()->getCurrentRound();
-		$this->getGame()->executeOnAll(function (Player $player) use($currentStateTime, $round): void {
-			$scoreboard = $this->getGame()->getScoreboardManager()->get($player);
+		/** @var PaintballGame $game - A bandaid solution to a larger problem */
+		$game = $this->getGame();
+		$round = $game->getCurrentRound();
+		$game->executeOnAll(function (Player $player) use($round, $game): void {
+			$scoreboard = $game->getScoreboardManager()->get($player);
 
 			$scoreboard->setLines([
 				0 => "------------------",

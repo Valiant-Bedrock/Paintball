@@ -88,9 +88,7 @@ class PaintballGame extends Game {
 		$this->getScoreboardManager()->add($player);
 	}
 
-	public function handleLeave(Player $player): void {
-
-	}
+	public function handleQuit(Player $player): void {}
 
 	public function getCurrentRound(): Round {
 		return $this->currentRound;
@@ -109,57 +107,5 @@ class PaintballGame extends Game {
 
 	public function addPastRound(Round $round): void {
 		$this->pastRounds[] = $round;
-	}
-
-	public function tick(): void {
-		parent::tick();
-		$this->currentStateTime++;
-	}
-
-	public function isUnassociatedPlayer(Player $player): bool {
-		return isset($this->unassociatedPlayers[$player->getUniqueId()->getBytes()]);
-	}
-
-	/**
-	 * @param Closure(Player): void $closure
-	 * @return void
-	 */
-	public function executeOnAll(Closure $closure): void {
-		$all = array_filter(array: $this->getServer()->getOnlinePlayers(), callback: fn(Player $player): bool => $this->isInGame($player));
-		foreach ($all as $player) {
-			$closure($player);
-		}
-	}
-
-	/**
-	 * @param Closure(Team): void $closure
-	 * @return void
-	 */
-	public function executeOnTeams(Closure $closure): void {
-		foreach ($this->getTeamManager()->getAll() as $team) {
-			$closure($team);
-		}
-	}
-
-	/**
-	 * @param Closure(Player): void $closure
-	 * @return void
-	 */
-	public function executeOnPlayers(Closure $closure) {
-		foreach($this->getTeamManager()->getAll() as $team) {
-			foreach($team->getPlayers() as $player) {
-				$closure($player);
-			}
-		}
-	}
-
-	/**
-	 * @param Closure(Player): void $closure
-	 * @return void
-	 */
-	public function executeOnSpectators(Closure $closure): void {
-		foreach ($this->getSpectatorManager()->getAll() as $player) {
-			$closure($player);
-		}
 	}
 }
