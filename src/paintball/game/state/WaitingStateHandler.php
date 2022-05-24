@@ -13,11 +13,17 @@ declare(strict_types=1);
 
 namespace paintball\game\state;
 
+use libgame\game\Game;
 use libgame\game\GameStateHandler;
+use paintball\game\PaintballGame;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 
 class WaitingStateHandler extends GameStateHandler {
+
+	public function getGame(): PaintballGame|Game {
+		return $this->game;
+	}
 
 	public function handleSetup(): void {
 
