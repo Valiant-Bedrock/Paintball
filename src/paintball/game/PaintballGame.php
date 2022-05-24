@@ -34,6 +34,7 @@ class PaintballGame extends Game {
 
 	public const TITLE = TextFormat::RED . TextFormat::BOLD . "VALIANT" . TextFormat::RESET . TextFormat::WHITE .  " - " . TextFormat::WHITE . "Paintball";
 	public const HEARTBEAT_PERIOD = 20;
+
 	public const ROUND_COUNT = 5;
 
 	/** @var array<Round> */
@@ -71,10 +72,6 @@ class PaintballGame extends Game {
 		return new PostgameStateHandler($game);
 	}
 
-	public function isInGame(Player $player): bool {
-		return $this->getSpectatorManager()->isSpectator($player) || $this->getTeamManager()->hasTeam($player) || $this->isUnassociatedPlayer($player);
-	}
-
 	public function handleJoin(Player $player): void {
 		[$id, $color] = $this->getTeamManager()->generateTeamData();
 		$this->getTeamManager()->add(new Team(
@@ -88,9 +85,7 @@ class PaintballGame extends Game {
 		$this->getScoreboardManager()->add($player);
 	}
 
-	public function handleLeave(Player $player): void {
-
-	}
+	public function handleQuit(Player $player): void {}
 
 	public function getCurrentRound(): Round {
 		return $this->currentRound;
@@ -111,55 +106,4 @@ class PaintballGame extends Game {
 		$this->pastRounds[] = $round;
 	}
 
-	public function tick(): void {
-		parent::tick();
-		$this->currentStateTime++;
-	}
-
-	public function isUnassociatedPlayer(Player $player): bool {
-		return isset($this->unassociatedPlayers[$player->getUniqueId()->getBytes()]);
-	}
-
-	/**
-	 * @param Closure(Player): void $closure
-	 * @return void
-	 */
-	public function executeOnAll(Closure $closure): void {
-		$all = array_filter(array: $this->getServer()->getOnlinePlayers(), callback: fn(Player $player): bool => $this->isInGame($player));
-		foreach ($all as $player) {
-			$closure($player);
-		}
-	}
-
-	/**
-	 * @param Closure(Team): void $closure
-	 * @return void
-	 */
-	public function executeOnTeams(Closure $closure): void {
-		foreach ($this->getTeamManager()->getAll() as $team) {
-			$closure($team);
-		}
-	}
-
-	/**
-	 * @param Closure(Player): void $closure
-	 * @return void
-	 */
-	public function executeOnPlayers(Closure $closure) {
-		foreach($this->getTeamManager()->getAll() as $team) {
-			foreach($team->getPlayers() as $player) {
-				$closure($player);
-			}
-		}
-	}
-
-	/**
-	 * @param Closure(Player): void $closure
-	 * @return void
-	 */
-	public function executeOnSpectators(Closure $closure): void {
-		foreach ($this->getSpectatorManager()->getAll() as $player) {
-			$closure($player);
-		}
-	}
 }

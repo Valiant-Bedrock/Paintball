@@ -22,6 +22,7 @@ use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
+use pocketmine\world\World;
 
 class PaintballListener implements Listener {
 
@@ -29,7 +30,7 @@ class PaintballListener implements Listener {
 
 	public function handleJoin(PlayerJoinEvent $event): void {
 		$world = $this->plugin->getServer()->getWorldManager()->getWorldByName("paintball_test");
-
+		assert($world instanceof World, "World is not a world");
 		if(!$this->plugin->hasDefaultGame()) {
 			$game = new PaintballGame(
 				plugin: $this->plugin,
@@ -46,7 +47,7 @@ class PaintballListener implements Listener {
 		$game->handleJoin($event->getPlayer());
 	}
 
-	public function handleEntityDamage(EntityDamageEvent $event) {
+	public function handleEntityDamage(EntityDamageEvent $event): void {
 		$entity = $event->getEntity();
 		if(!$entity instanceof Player) {
 			return;
