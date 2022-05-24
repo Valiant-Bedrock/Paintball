@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fb454810caafc10d4378171ccfb0d60f",
+    "content-hash": "e1afcbcc5751fb0cc19073c251feaa08",
     "packages": [
         {
             "name": "valiant-bedrock/libgame",
@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:Valiant-Bedrock/libgame.git",
-                "reference": "76c76778f723190d4b51e19e4440c15fb56955dd"
+                "reference": "248cf36889b592d59f41469ca562a3c7be5254e6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/76c76778f723190d4b51e19e4440c15fb56955dd",
-                "reference": "76c76778f723190d4b51e19e4440c15fb56955dd",
+                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/248cf36889b592d59f41469ca562a3c7be5254e6",
+                "reference": "248cf36889b592d59f41469ca562a3c7be5254e6",
                 "shasum": ""
             },
             "require": {
@@ -53,7 +53,7 @@
                 "source": "https://github.com/Valiant-Bedrock/libgame/tree/master",
                 "issues": "https://github.com/Valiant-Bedrock/libgame/issues"
             },
-            "time": "2022-05-24T17:20:26+00:00"
+            "time": "2022-05-24T17:22:06+00:00"
         },
         {
             "name": "valiant-bedrock/libscoreboard",
@@ -1501,6 +1501,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
+        "valiant-bedrock/libgame": 20,
         "phpstan/phpstan": 20,
         "pocketmine/pocketmine-mp": 20
     },
