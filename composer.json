@@ -1,0 +1,36 @@
+{
+  "name": "valiant-bedrock/paintball",
+  "description": "A paintball gamemode made for Minecraft: Bedrock Edition",
+  "type": "project",
+  "version": "0.0.1",
+  "autoload": {
+    "psr-4": {
+      "paintball\\": "src/paintball"
+    }
+  },
+  "require": {
+    "valiant-bedrock/libgame": ">=0.5.0"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "1.6.x-dev",
+    "pocketmine/pocketmine-mp": "dev-stable"
+  },
+  "scripts": {
+    "analyze": "./vendor/bin/phpstan analyze"
+  },
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "sylvrs",
+      "email": "personal@matthewjordan.xyz"
+    }
+  ],
+  "minimum-stability": "dev",
+  "repositories": [
+    { "type": "vcs", "url": "git@github.com:NetherGamesMC/PocketMine-MP.git" },
+    { "type": "vcs", "url": "git@github.com:NetherGamesMC/BedrockProtocol.git" },
+    { "type": "vcs", "url": "git@github.com:NetherGamesMC/BedrockData.git" },
+    { "type": "vcs", "url": "git@github.com:Valiant-Bedrock/libscoreboard.git" },
+    { "type": "vcs", "url": "git@github.com:Valiant-Bedrock/libgame.git" }
+  ]
+}
