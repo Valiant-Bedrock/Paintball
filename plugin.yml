@@ -9,3 +9,11 @@ commands:
     description: "Starts the game"
     usage: /start
     permission: pocketmine.group.operator
+  createarena:
+    description: "Starts the process of creating an arena"
+    usage: /createarena
+    permission: pocketmine.group.operator
+  creategame:
+    description: "Creates a new game"
+    usage: /creategame
+    permission: pocketmine.group.operator

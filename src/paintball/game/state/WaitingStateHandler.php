@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace paintball\game\state;
 
-use libgame\game\Game;
+use libgame\game\GameState;
 use libgame\game\GameStateHandler;
 use paintball\game\PaintballGame;
 use pocketmine\player\Player;
@@ -21,17 +21,18 @@ use pocketmine\utils\TextFormat;
 
 class WaitingStateHandler extends GameStateHandler {
 
-	public function getGame(): PaintballGame|Game {
-		return $this->game;
-	}
-
-	public function handleSetup(): void {
-
-	}
+	public function handleSetup(): void {}
 
 	public function handleTick(int $currentStateTime): void {
-		$this->getGame()->executeOnAll(function (Player $player): void {
-			$scoreboard = $this->getGame()->getScoreboardManager()->get($player);
+		/** @var PaintballGame $game */
+		$game = $this->getGame();
+		if(count($game->getTeamManager()->getAll()) === 2) {
+			$game->broadcastMessage(TextFormat::GREEN . "Team limit reached! Starting game...");
+			$game->setState(GameState::IN_GAME());
+			return;
+		}
+		$game->executeOnAll(function (Player $player) use($game): void {
+			$scoreboard = $game->getScoreboardManager()->get($player);
 			$scoreboard->setLines([
 				0 => "------------------",
 				1 => TextFormat::GREEN . "Waiting for players...",
@@ -41,7 +42,5 @@ class WaitingStateHandler extends GameStateHandler {
 		});
 	}
 
-	public function handleFinish(): void {
-
-	}
+	public function handleFinish(): void {}
 }

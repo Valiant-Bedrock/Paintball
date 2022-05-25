@@ -9,7 +9,9 @@
     }
   },
   "require": {
-    "valiant-bedrock/libgame": "dev-master"
+    "sylvrs/libmarshal": ">=1.4.3",
+    "valiant-bedrock/libgame": "dev-master",
+    "valiant-bedrock/libforms": "dev-master"
   },
   "require-dev": {
     "phpstan/phpstan": "1.6.x-dev",
@@ -31,6 +33,7 @@
     { "type": "vcs", "url": "git@github.com:NetherGamesMC/BedrockProtocol.git" },
     { "type": "vcs", "url": "git@github.com:NetherGamesMC/BedrockData.git" },
     { "type": "vcs", "url": "git@github.com:Valiant-Bedrock/libscoreboard.git" },
-    { "type": "vcs", "url": "git@github.com:Valiant-Bedrock/libgame.git" }
+    { "type": "vcs", "url": "git@github.com:Valiant-Bedrock/libgame.git" },
+    { "type": "vcs", "url": "git@github.com:Valiant-Bedrock/libforms.git" }
   ]
 }

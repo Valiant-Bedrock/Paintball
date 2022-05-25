@@ -13,13 +13,11 @@ declare(strict_types=1);
 
 namespace paintball;
 
-use libgame\Arena;
-use libgame\team\TeamMode;
+use libgame\game\Game;
 use paintball\game\PaintballGame;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
-use pocketmine\math\AxisAlignedBB;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
 
@@ -28,22 +26,28 @@ class PaintballListener implements Listener {
 	public function __construct(protected PaintballBase $plugin) {}
 
 	public function handleJoin(PlayerJoinEvent $event): void {
-		$world = $this->plugin->getServer()->getWorldManager()->getWorldByName("paintball_test") ?? throw new AssumptionFailedError("World not found");
-
-		if(!$this->plugin->hasDefaultGame()) {
-			$game = new PaintballGame(
-				plugin: $this->plugin,
-				uniqueId: uniqid(),
-				arena: new Arena(world: $world, alignedBB: AxisAlignedBB::one()),
-				teamMode: TeamMode::SOLO()
-			);
+		if($this->plugin->hasDefaultGame()) {
+			$game = $this->plugin->getDefaultGame() ?? throw new AssumptionFailedError("Game not found");
+		} else {
+			$arena = $this->plugin->getArenaManager()->findOpen();
+			if($arena === null) {
+				return;
+			}
+			$this->plugin->getArenaManager()->setOccupied($arena, true);
+			$game = new PaintballGame(plugin: $this->plugin, uniqueId: uniqid(), arena: $arena);
 			$this->plugin->getGameManager()->add($game);
 			$this->plugin->setDefaultGame($game);
-		} else {
-			$game = $this->plugin->getDefaultGame() ?? throw new AssumptionFailedError("Default game is null");
 		}
-
 		$game->handleJoin($event->getPlayer());
+	}
+
+	public function getGameByPlayer(Player $player): ?Game {
+		foreach($this->plugin->getGameManager()->getAll() as $currentGame) {
+			if($currentGame->isInGame($player)) {
+				return $currentGame;
+			}
+		}
+		return null;
 	}
 
 	public function handleEntityDamage(EntityDamageEvent $event): void {
@@ -51,9 +55,10 @@ class PaintballListener implements Listener {
 		if(!$entity instanceof Player) {
 			return;
 		}
-		if($event->getCause() === EntityDamageEvent::CAUSE_FALL) {
-			$event->cancel();
+		if(($game = $this->getGameByPlayer($entity)) === null) {
+			return;
 		}
+		$game->handleEntityDamage($event);
 	}
 
 }

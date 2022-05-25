@@ -13,38 +13,53 @@ declare(strict_types=1);
 
 namespace paintball\game;
 
-use Closure;
-use libgame\Arena;
+use Cassandra\Custom;
 use libgame\game\Game;
 use libgame\game\GameState;
 use libgame\game\GameStateHandler;
 use libgame\GameBase;
+use libgame\team\member\MemberState;
 use libgame\team\Team;
 use libgame\team\TeamMode;
+use paintball\arena\PaintballArena;
+use paintball\event\PlayerDeathEvent;
 use paintball\game\state\CountdownStateHandler;
 use paintball\game\state\InGameStateHandler;
 use paintball\game\state\PostgameStateHandler;
 use paintball\game\state\WaitingStateHandler;
+use paintball\item\CustomItems;
+use pocketmine\event\entity\EntityDamageByChildEntityEvent;
+use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\item\Item;
+use pocketmine\item\VanillaItems;
+use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\GameRulesChangedPacket;
 use pocketmine\network\mcpe\protocol\types\BoolGameRule;
+use pocketmine\player\GameMode;
 use pocketmine\player\Player;
+use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
 
 class PaintballGame extends Game {
 
 	public const TITLE = TextFormat::RED . TextFormat::BOLD . "VALIANT" . TextFormat::RESET . TextFormat::WHITE .  " - " . TextFormat::WHITE . "Paintball";
 	public const HEARTBEAT_PERIOD = 20;
-	public const ROUND_COUNT = 5;
 
-	/** @var array<Round> */
-	protected array $pastRounds = [];
-	protected Round $currentRound;
+	public const MAX_HEALTH = 1;
 
-	public function __construct(GameBase $plugin, string $uniqueId, Arena $arena, TeamMode $teamMode) {
-		parent::__construct($plugin, $uniqueId, $arena, $teamMode, self::TITLE,self::HEARTBEAT_PERIOD);
-		$this->currentRound = new Round(roundNumber: 1);
+	/** @var array<int, Vector3> */
+	protected array $teamSpawnpoints = [];
+
+	protected RoundManager $roundManager;
+
+	public function __construct(GameBase $plugin, string $uniqueId, PaintballArena $arena) {
+		parent::__construct($plugin, $uniqueId, $arena, TeamMode::SOLO(), self::TITLE,self::HEARTBEAT_PERIOD);
+		$this->roundManager = new RoundManager($this);
 	}
 
+	public function getRoundManager(): RoundManager {
+		return $this->roundManager;
+	}
 
 	public function start(): void {
 		$this->setState(GameState::COUNTDOWN());
@@ -90,22 +105,79 @@ class PaintballGame extends Game {
 
 	public function handleQuit(Player $player): void {}
 
-	public function getCurrentRound(): Round {
-		return $this->currentRound;
+	public function setTeamSpawnpoint(int $id, Vector3 $spawnpoint): void {
+		$this->teamSpawnpoints[$id] = $spawnpoint;
 	}
 
-	public function setCurrentRound(Round $currentRound): void {
-		$this->currentRound = $currentRound;
+	public function getTeamSpawnpoint(int $id): Vector3 {
+		return $this->teamSpawnpoints[$id];
+	}
+
+	public function getFirstTeam(): Team {
+		return $this->getTeamManager()->get(1) ?? throw new AssumptionFailedError("No team found");
+	}
+
+	public function getSecondTeam(): Team {
+		return $this->getTeamManager()->get(2) ?? throw new AssumptionFailedError("No team found");
+	}
+
+	public function handleEntityDamage(EntityDamageEvent $event): void {
+		$player = $event->getEntity();
+		assert($player instanceof Player);
+		$team = $this->getTeamManager()->getTeam($player);
+		if($team === null) {
+			return;
+		}
+		if(!$event instanceof EntityDamageByChildEntityEvent) {
+			$event->cancel();
+			return;
+		}
+
+		if($event->getFinalDamage() >= $player->getHealth()) {
+			$event->cancel();
+			$deathEvent = new PlayerDeathEvent($player);
+			$deathEvent->call();
+
+			$player->getInventory()->clearAll();
+			$player->getArmorInventory()->clearAll();
+			$player->setGamemode(GameMode::SPECTATOR());
+			$this->getTeamManager()->setPlayerState($player, MemberState::DEAD());
+		}
 	}
 
 	/**
-	 * @return array<Round>
+	 * @return array{armor: array<Item>, items: array<Item>}
 	 */
-	public function getPastRounds(): array {
-		return $this->pastRounds;
+	public function getKit(): array {
+		return [
+			"armor" => [
+				VanillaItems::LEATHER_CAP(),
+				VanillaItems::LEATHER_TUNIC(),
+				VanillaItems::LEATHER_PANTS(),
+				VanillaItems::LEATHER_BOOTS()
+			],
+			"items" => [
+				0 => CustomItems::CROSSBOW(),
+				8 => VanillaItems::ARROW()->setCount(16)
+			]
+		];
 	}
 
-	public function addPastRound(Round $round): void {
-		$this->pastRounds[] = $round;
+	public function broadcastMessage(string $message): void {
+		$this->executeOnAll(function(Player $player) use ($message): void {
+			$player->sendMessage($message);
+		});
+	}
+
+	public function broadcastTip(string $tip): void {
+		$this->executeOnAll(function(Player $player) use ($tip): void {
+			$player->sendTip($tip);
+		});
+	}
+
+	public function broadcastPopup(string $popup): void {
+		$this->executeOnAll(function(Player $player) use ($popup): void {
+			$player->sendPopup($popup);
+		});
 	}
 }
