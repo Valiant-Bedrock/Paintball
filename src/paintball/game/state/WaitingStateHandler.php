@@ -28,9 +28,10 @@ class WaitingStateHandler extends GameStateHandler {
 		$game = $this->getGame();
 		if(count($game->getTeamManager()->getAll()) === 2) {
 			$game->broadcastMessage(TextFormat::GREEN . "Team limit reached! Starting game...");
-			$game->setState(GameState::IN_GAME());
+			$game->setState(GameState::STARTING());
 			return;
 		}
+
 		$game->executeOnAll(function (Player $player) use($game): void {
 			$scoreboard = $game->getScoreboardManager()->get($player);
 			$scoreboard->setLines([

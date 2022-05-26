@@ -17,26 +17,27 @@ use Closure;
 use libgame\game\Game;
 use libgame\game\GameState;
 use libgame\game\GameStateHandler;
+use libgame\game\round\RoundState;
+use libgame\game\RoundBasedGame;
 use libgame\GameBase;
+use libgame\kit\Kit;
 use libgame\team\member\MemberState;
 use libgame\team\Team;
 use libgame\team\TeamMode;
 use paintball\arena\PaintballArena;
+use paintball\entity\FlagEntity;
 use paintball\event\PlayerDeathEvent;
-use paintball\game\state\CountdownStateHandler;
+use paintball\game\state\StartingStateHandler;
 use paintball\game\state\InGameStateHandler;
 use paintball\game\state\PostgameStateHandler;
 use paintball\game\state\WaitingStateHandler;
-use paintball\item\CustomItems;
-use paintball\TeamFlagEntity;
-use pocketmine\data\bedrock\EnchantmentIdMap;
-use pocketmine\data\bedrock\EnchantmentIds;
+use paintball\PaintballBase;
+use paintball\PaintballEventHandler;
+use paintball\utils\ArenaUtils;
+use pocketmine\entity\Location;
 use pocketmine\event\entity\EntityDamageByChildEntityEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\item\enchantment\EnchantmentInstance;
-use pocketmine\item\Item;
-use pocketmine\item\VanillaItems;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\GameRulesChangedPacket;
 use pocketmine\network\mcpe\protocol\types\BoolGameRule;
@@ -44,46 +45,47 @@ use pocketmine\player\GameMode;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
-use pocketmine\world\sound\NoteInstrument;
-use pocketmine\world\sound\NoteSound;
-use pocketmine\world\sound\Sound;
+use pocketmine\world\Position;
+use pocketmine\world\World;
 
-class PaintballGame extends Game {
+class PaintballGame extends RoundBasedGame {
 
 	public const TITLE = TextFormat::RED . TextFormat::BOLD . "VALIANT" . TextFormat::RESET . TextFormat::WHITE .  " - " . TextFormat::WHITE . "Paintball";
 	public const HEARTBEAT_PERIOD = 20;
 
+	public const TEAM_COUNT = 2;
+
 	public const MAX_HEALTH = 1;
+
+	protected PaintballEventHandler $eventHandler;
 
 	/** @var array<int, Vector3> */
 	protected array $teamSpawnpoints = [];
 
-	protected RoundManager $roundManager;
-
-	public function __construct(GameBase $plugin, string $uniqueId, PaintballArena $arena) {
-		parent::__construct($plugin, $uniqueId, $arena, TeamMode::SOLO(), self::TITLE,self::HEARTBEAT_PERIOD);
-		$this->roundManager = new RoundManager($this);
+	public function __construct(GameBase $plugin, string $uniqueId, PaintballArena $arena, protected World $lobbyWorld, protected Kit $kit) {
+		parent::__construct($plugin, $uniqueId, $arena, new PaintballRoundManager($this), TeamMode::SOLO(), self::TITLE,self::HEARTBEAT_PERIOD);
+		$this->eventHandler = new PaintballEventHandler($this);
+		$this->eventHandler->register($plugin);
 	}
 
-	public function getRoundManager(): RoundManager {
-		return $this->roundManager;
+	public function getLobbyWorld(): World {
+		return $this->lobbyWorld;
+	}
+
+	public function getKit(): Kit {
+		return $this->kit;
 	}
 
 	public function start(): void {
-		$this->setState(GameState::COUNTDOWN());
-	}
-
-	public function setState(GameState $state): void {
-		parent::setState($state);
-		$this->currentStateTime = 0;
+		$this->setState(GameState::STARTING());
 	}
 
 	public function setupWaitingStateHandler(Game $game): GameStateHandler {
 		return new WaitingStateHandler($game);
 	}
 
-	public function setupCountdownStateHandler(Game $game): GameStateHandler {
-		return new CountdownStateHandler($game);
+	public function setupStartingStateHandler(Game $game): GameStateHandler {
+		return new StartingStateHandler($game);
 	}
 
 	public function setupInGameStateHandler(Game $game): GameStateHandler {
@@ -99,13 +101,14 @@ class PaintballGame extends Game {
 	}
 
 	public function handleJoin(Player $player): void {
-		if(count($this->getTeamManager()->getAll()) < 2) {
+		if(count($this->getTeamManager()->getAll()) < self::TEAM_COUNT) {
 			[$id, $color] = $this->getTeamManager()->generateTeamData();
 			$this->getTeamManager()->add(new Team(
 				id: $id,
 				color: $color,
 				members: [$player]
 			));
+			$player->teleport($this->getLobbyWorld()->getSpawnLocation());
 			$player->getNetworkSession()->sendDataPacket(GameRulesChangedPacket::create([
 				"showCoordinates" => new BoolGameRule(true, true)
 			]));
@@ -116,16 +119,35 @@ class PaintballGame extends Game {
 			$player->teleport($this->getArena()->getWorld()->getSpawnLocation());
 			$player->setGamemode(GameMode::SPECTATOR());
 		}
+		$this->broadcastMessage(TextFormat::YELLOW . "{$player->getName()} has joined the game!");
 	}
 
-	public function handleQuit(Player $player): void {}
+	public function handleQuit(Player $player): void {
+		$this->getScoreboardManager()->remove($player);
+		if($this->getSpectatorManager()->isSpectator($player)) {
+			$this->getSpectatorManager()->remove($player);
+		}
+		if(($team = $this->getTeamManager()->getTeam($player)) !== null) {
+			$team->removeMember($player);
+			if(count($team->getMembers()) === 0) {
+				$this->getTeamManager()->remove($team);
+			}
 
-	public function setTeamSpawnpoint(int $id, Vector3 $spawnpoint): void {
-		$this->teamSpawnpoints[$id] = $spawnpoint;
+			$teams = $this->getTeamManager()->getAll();
+			if(count($teams) === 1) {
+				$remainingTeam = $teams[array_key_first($teams)];
+				$this->broadcastMessage(TextFormat::YELLOW . "All members of $team have left the game! $remainingTeam wins!");
+				$this->setState(GameState::POSTGAME());
+			}
+		}
 	}
 
-	public function getTeamSpawnpoint(int $id): Vector3 {
-		return $this->teamSpawnpoints[$id];
+	public function setTeamSpawnpoint(Team $team, Vector3 $spawnpoint): void {
+		$this->teamSpawnpoints[$team->getId()] = $spawnpoint;
+	}
+
+	public function getTeamSpawnpoint(Team $team): Vector3 {
+		return $this->teamSpawnpoints[$team->getId()];
 	}
 
 	public function getFirstTeam(): Team {
@@ -136,41 +158,35 @@ class PaintballGame extends Game {
 		return $this->getTeamManager()->get(2) ?? throw new AssumptionFailedError("No team found");
 	}
 
-	public function handleEntityDamage(EntityDamageEvent $event): void {
-		$entity = $event->getEntity();
-		if($entity instanceof Player) {
-			$team = $this->getTeamManager()->getTeam($entity);
-			if($team === null) {
-				return;
-			}
-			if(!$event instanceof EntityDamageByChildEntityEvent) {
-				$event->cancel();
-				return;
-			}
+	/**
+	 * This method configures a team
+	 *
+	 * @param Team $team
+	 * @return void
+	 */
+	public function setupTeam(Team $team): void {
+		$spawnpoint = $this->getTeamSpawnpoint($team);
+		// Setup players
+		$team->executeOnPlayers(function(Player $player) use($spawnpoint): void {
+			// Ensure player is alive
+			$this->getTeamManager()->setPlayerState($player, MemberState::ALIVE());
+			$player->setMaxHealth(PaintballGame::MAX_HEALTH);
+			$player->setImmobile();
+			$this->setupPlayer($player);
+			$player->teleport(Position::fromObject($spawnpoint, $this->getArena()->getWorld()));
+		});
 
-			$damager = $event->getDamager();
-			assert($damager instanceof Player);
-			$this->getArena()->getWorld()->addSound($damager->getPosition(), new NoteSound(NoteInstrument::PIANO(), 127), [$damager]);
+		$world = $this->getArena()->getWorld();
+		$entity = new FlagEntity(Location::fromObject($spawnpoint->add(0, 2, 0), $world), $team, null);
+		$entity->setNameTag(TextFormat::YELLOW . "$team's Flag");
+		$entity->spawnToAll();
+	}
 
-			$event->cancel();
-			$deathEvent = new PlayerDeathEvent($entity);
-			$deathEvent->call();
-
-			$this->kill($entity);
-		} elseif($entity instanceof TeamFlagEntity && $event instanceof EntityDamageByEntityEvent) {
-			$event->cancel();
-			if($event instanceof EntityDamageByChildEntityEvent) {
-				return;
-			}
-			$damager = $event->getDamager();
-			assert($damager instanceof Player);
-			$team = $entity->getTeam();
-			if($this->getTeamManager()->getTeam($damager) !== $team) {
-				$team->executeOnPlayers(Closure::fromCallable([$this, "kill"]));
-				$this->broadcastMessage(TextFormat::RED . $damager->getName() . " has destroyed " . $team->getFormattedName() . TextFormat::RED . "'s flag!");
-			}
-		}
-
+	public function setupPlayer(Player $player): void {
+		$player->getInventory()->clearAll();
+		$player->getArmorInventory()->clearAll();
+		$player->setGamemode(GameMode::ADVENTURE());
+		$player->setHealth($player->getMaxHealth());
 	}
 
 	public function kill(Player $player): void {
@@ -183,49 +199,39 @@ class PaintballGame extends Game {
 		$this->getTeamManager()->setPlayerState($player, MemberState::DEAD());
 	}
 
-	/**
-	 * @return array{armor: array<Item>, items: array<Item>}
-	 */
-	public function getKit(): array {
-		$map = EnchantmentIdMap::getInstance();
-		return [
-			"armor" => [
-				VanillaItems::LEATHER_CAP(),
-				VanillaItems::LEATHER_TUNIC(),
-				VanillaItems::LEATHER_PANTS(),
-				VanillaItems::LEATHER_BOOTS()
-			],
-			"items" => [
-				0 => CustomItems::CROSSBOW()->addEnchantment(new EnchantmentInstance(
-					enchantment: $map->fromId(EnchantmentIds::QUICK_CHARGE) ?? throw new AssumptionFailedError("Enchantment does not exist"),
-					level: 3
-				)),
-				8 => VanillaItems::ARROW()->setCount(16)
-			]
-		];
-	}
+	public function finish(): void {
+		$this->getHeartbeat()->cancel();
+		$this->getPlugin()->getGameManager()->remove($this);
+		$this->eventHandler->unregister();
 
-	public function broadcastMessage(string $message): void {
-		$this->executeOnAll(function(Player $player) use ($message): void {
-			$player->sendMessage($message);
+		$this->executeOnAll(function(Player $player): void {
+			$player->setGamemode(GameMode::ADVENTURE());
+			$player->setAllowFlight(false);
+			$player->setFlying(false);
+			$player->setMaxHealth(20);
+			$player->setHealth($player->getMaxHealth());
+			$player->teleport($this->getPlugin()->getServer()->getWorldManager()->getDefaultWorld()?->getSafeSpawn() ?? throw new AssumptionFailedError("No default world"));
+			if($this->getSpectatorManager()->isSpectator($player)) {
+				$this->getSpectatorManager()->remove($player);
+			}
+			if($this->isUnassociatedPlayer($player)) {
+				$this->removeUnassociatedPlayer($player);
+			}
+			$scoreboard = $this->getScoreboardManager()->get($player);
+			$scoreboard->remove();
+			$this->getScoreboardManager()->remove($player);
 		});
-	}
 
-	public function broadcastTip(string $tip): void {
-		$this->executeOnAll(function(Player $player) use ($tip): void {
-			$player->sendTip($tip);
-		});
-	}
-
-	public function broadcastPopup(string $popup): void {
-		$this->executeOnAll(function(Player $player) use ($popup): void {
-			$player->sendPopup($popup);
-		});
-	}
-
-	public function broadcastSound(Sound $sound): void {
-		$this->executeOnAll(function (Player $player) use($sound): void {
-			$player->getWorld()->addSound($player->getPosition(), $sound, [$player]);
-		});
+		$this->executeOnTeams(function(Team $team): void { $this->getTeamManager()->remove($team); });
+		/** @var PaintballArena $arena */
+		$arena = $this->getArena();
+		if($arena->isGenerated()) {
+			$this->getServer()->getWorldManager()->unloadWorld($arena->getWorld());
+			ArenaUtils::deleteDirectory($this->getServer()->getDataPath() . "worlds/{$arena->getWorld()->getFolderName()}");
+		} else {
+			PaintballBase::getInstance()->getArenaManager()->setOccupied($arena, false);
+		}
+		$this->getServer()->getWorldManager()->unloadWorld($this->getLobbyWorld());
+		ArenaUtils::deleteDirectory($this->getServer()->getDataPath() . "worlds/{$this->getLobbyWorld()->getFolderName()}");
 	}
 }

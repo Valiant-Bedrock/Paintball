@@ -13,19 +13,21 @@ declare(strict_types=1);
 
 namespace paintball;
 
-use libgame\Arena;
-use libgame\game\GameManager;
+use Closure;
+use libforms\buttons\Button;
+use libforms\SimpleForm;
+use libgame\arena\Arena;
+use libgame\arena\ArenaManager;
+use libgame\game\GameState;
 use libgame\GameBase;
+use paintball\arena\PaintballArena;
 use paintball\arena\PaintballArenaCreator;
 use paintball\arena\PaintballArenaManager;
 use paintball\game\PaintballGame;
+use paintball\item\PaintballKits;
+use paintball\utils\ArenaUtils;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\entity\EntityDataHelper as Helper;
-use pocketmine\entity\EntityFactory;
-use pocketmine\entity\Human;
-use pocketmine\math\AxisAlignedBB;
-use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
@@ -36,21 +38,25 @@ require_once dirname(__DIR__, 2) . "/vendor/autoload.php";
 
 class PaintballBase extends GameBase {
 
-	protected static PaintballBase $instance;
+	public const LOBBIES_WORLD_PATH = "lobbies/";
+	public const GENERATED_WORLD_PATH = "generated/";
 
-	protected PaintballArenaManager $arenaManager;
+	protected static PaintballBase $instance;
 
 	protected ?PaintballGame $defaultGame = null;
 
 	protected function onLoad(): void {
 		self::$instance = $this;
+
+		$this->getServer()->getWorldManager()->loadWorld("lobby", true);
+		parent::onLoad();
 	}
 
 	protected function onEnable() : void {
-		$this->arenaManager = new PaintballArenaManager($this);
-		$this->arenaManager->load();
+		$this->getArenaManager()->load();
 
-		$this->gameManager = new GameManager($this);
+		@mkdir($this->getServer()->getDataPath() . "worlds/" . self::GENERATED_WORLD_PATH);
+		@mkdir($this->getServer()->getDataPath() . "worlds/" . self::LOBBIES_WORLD_PATH);
 
 		$this->getServer()->getPluginManager()->registerEvents(
 			listener: new PaintballListener($this),
@@ -59,15 +65,11 @@ class PaintballBase extends GameBase {
 	}
 
 	protected function onDisable() : void {
-		$this->arenaManager->save();
+		ArenaUtils::deleteDirectory($this->getServer()->getDataPath() . "worlds/" . self::GENERATED_WORLD_PATH);
 	}
 
 	public static function getInstance(): PaintballBase {
 		return self::$instance;
-	}
-
-	public function getArenaManager(): PaintballArenaManager {
-		return $this->arenaManager;
 	}
 
 	public function getDefaultGame(): ?PaintballGame {
@@ -113,7 +115,103 @@ class PaintballBase extends GameBase {
 					$sender->sendMessage("You must be a player to use this command.");
 					return true;
 				}
+				$arena = $this->getArenaManager()->findOpenArena();
+				if($arena === null) {
+					$sender->sendMessage(TextFormat::YELLOW . "There are no open arenas at the moment. Attempting to generate one...");
+					$this->generateArena(
+						onSuccess: function(Arena $arena) use($sender): void {
+							$game = new PaintballGame(plugin: $this, uniqueId: uniqid(), arena: $arena, lobbyWorld: $this->createLobby(), kit: PaintballKits::VANILLA());
+							$this->getGameManager()->add($game);
+							$this->setDefaultGame($game);
+							$game->handleJoin($sender);
+						},
+						onFailure: function(string $errorMessage) use($sender): void {
+							$sender->sendMessage(TextFormat::RED . "Failed to generate an arena: $errorMessage");
+						}
+					);
+					return true;
+				}
+				$this->getArenaManager()->setOccupied($arena, true);
+				$game = new PaintballGame(plugin: $this, uniqueId: uniqid(), arena: $arena, lobbyWorld: $this->createLobby(), kit: PaintballKits::VANILLA());
+				$this->getGameManager()->add($game);
+				$this->setDefaultGame($game);
+			case "join":
+				if(!$sender instanceof Player) {
+					$sender->sendMessage("You must be a player to use this command.");
+					return true;
+				}
+				if($this->getGameManager()->getGameByPlayer($sender) !== null) {
+					$sender->sendMessage(TextFormat::RED . "You can't use this command while in a game");
+					return true;
+				}
+
+				$form = new SimpleForm(
+					title: "Game Selector",
+					buttons: array_map(
+						callback: fn(PaintballGame $game) => new Button(
+							text: TextFormat::YELLOW . "Game ({$game->getKit()->getName()})" . TextFormat::WHITE . "[" . $this->getNameFromState($game->getState()) . TextFormat::WHITE . "]",
+							onClick: function (Player $player) use($game): void {
+								$game->handleJoin($player);
+							}),
+						array: array_values($this->getGameManager()->getAll())
+					)
+				);
+				$form->send($sender);
+				return true;
 		}
 		return true;
+	}
+
+	public function getNameFromState(GameState $state): string {
+		return match($state->id()) {
+			GameState::WAITING()->id() => TextFormat::GREEN . "Waiting",
+			GameState::STARTING()->id() => TextFormat::YELLOW . "Starting",
+			GameState::IN_GAME()->id() => TextFormat::YELLOW . "In Game",
+			GameState::POSTGAME()->id() => TextFormat::YELLOW . "Postgame",
+			default => TextFormat::RED . "Unknown"
+		};
+	}
+
+	/**
+	 * @param Closure(Arena): void $onSuccess
+	 * @param Closure(string): void $onFailure
+	 * @return void
+	 */
+	protected function generateArena(Closure $onSuccess, Closure $onFailure): void {
+		// Pick template
+		$templates = ArenaUtils::getTemplates();
+		$template = $templates[array_rand($templates)];
+		// Create folder name with unique ID
+		$folderName =  self::GENERATED_WORLD_PATH . uniqid($template . "-");
+		// Copy contents to world
+		if(!ArenaUtils::copyDirectory($this->getDataFolder() . "arena_templates/" . $template, $this->getServer()->getDataPath() . "worlds/" . $folderName)) {
+			$onFailure("Failed to copy directory.");
+			return;
+		}
+		// Load world & configure
+		$loaded = $this->getServer()->getWorldManager()->loadWorld($folderName);
+		if(!$loaded) {
+			$onFailure("Failed to load world.");
+			return;
+		}
+		$world = $this->getServer()->getWorldManager()->getWorldByName($folderName) ?? throw new AssumptionFailedError("World $folderName does not exist.");
+		$world->setAutoSave(false);
+		// Get arena spawnpoints
+		/** @var PaintballArenaManager $arenaManager */
+		$arenaManager = $this->getArenaManager();
+		$data = $arenaManager->getArenaDataByWorldName($template) ?? throw new AssumptionFailedError("Arena data for $template does not exist.");
+		$arena = new PaintballArena(world: $world, firstSpawnpoint: $data->getFirstSpawnpoint(), secondSpawnpoint: $data->getSecondSpawnpoint(), generated: true);
+		$onSuccess($arena);
+	}
+
+	protected function setupArenaManager(): ArenaManager {
+		return new PaintballArenaManager($this);
+	}
+
+	public function createLobby(): World {
+		$lobbyPath = self::LOBBIES_WORLD_PATH . uniqid("lobby-");
+		ArenaUtils::copyDirectory($this->getDataFolder() . "lobby", $this->getServer()->getDataPath() . "worlds/$lobbyPath");
+		$this->getServer()->getWorldManager()->loadWorld($lobbyPath);
+		return $this->getServer()->getWorldManager()->getWorldByName($lobbyPath) ?? throw new AssumptionFailedError("World $lobbyPath does not exist.");
 	}
 }

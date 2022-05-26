@@ -107,8 +107,9 @@ class PaintballArenaCreator implements Listener {
 			firstSpawnpoint: $this->firstSpawnpoint,
 			secondSpawnpoint: $this->secondSpawnpoint
 		)));
+		$this->plugin->getArenaManager()->save();
 		HandlerListManager::global()->unregisterAll($this);
-		$this->getCreator()->sendMessage(TextFormat::GREEN . "Arena successfully created!");
+		$this->getCreator()->sendMessage(TextFormat::GREEN . "Arena successfully created and saved!");
 	}
 
 }

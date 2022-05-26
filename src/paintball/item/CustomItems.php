@@ -25,6 +25,10 @@ class CustomItems {
 	use CloningRegistryTrait;
 
 	protected static function setup(): void {
-		self::_registryRegister("crossbow", ItemFactory::getInstance()->get(ItemIds::CROSSBOW));
+		self::register("crossbow", ItemFactory::getInstance()->get(ItemIds::CROSSBOW));
+	}
+
+	protected static function register(string $name, Item $item): void {
+		self::_registryRegister($name, $item);
 	}
 }

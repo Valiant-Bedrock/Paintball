@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c5f18de570b6d07c411c7d9e14792aee",
+    "content-hash": "f7992a4ff9950c4144f448f2a78c2b0b",
     "packages": [
         {
             "name": "sylvrs/libmarshal",
@@ -58,12 +58,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:Valiant-Bedrock/libforms.git",
-                "reference": "c7611fcac20e1973ff3f25f7b018a88b7a8799f0"
+                "reference": "809bd084bb1a3bee30cb811ad1a04a7fad58a720"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Valiant-Bedrock/libforms/zipball/c7611fcac20e1973ff3f25f7b018a88b7a8799f0",
-                "reference": "c7611fcac20e1973ff3f25f7b018a88b7a8799f0",
+                "url": "https://api.github.com/repos/Valiant-Bedrock/libforms/zipball/809bd084bb1a3bee30cb811ad1a04a7fad58a720",
+                "reference": "809bd084bb1a3bee30cb811ad1a04a7fad58a720",
                 "shasum": ""
             },
             "require-dev": {
@@ -97,7 +97,7 @@
                 "source": "https://github.com/Valiant-Bedrock/libforms/tree/master",
                 "issues": "https://github.com/Valiant-Bedrock/libforms/issues"
             },
-            "time": "2022-05-25T22:10:58+00:00"
+            "time": "2022-05-26T11:20:49+00:00"
         },
         {
             "name": "valiant-bedrock/libgame",
@@ -105,15 +105,16 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:Valiant-Bedrock/libgame.git",
-                "reference": "41fc4b5ab4a1b96aa48a4b11dfe20ce612fa011c"
+                "reference": "12eb2393b7f55129a7279ce01b751559ff3f3a41"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/41fc4b5ab4a1b96aa48a4b11dfe20ce612fa011c",
-                "reference": "41fc4b5ab4a1b96aa48a4b11dfe20ce612fa011c",
+                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/12eb2393b7f55129a7279ce01b751559ff3f3a41",
+                "reference": "12eb2393b7f55129a7279ce01b751559ff3f3a41",
                 "shasum": ""
             },
             "require": {
+                "sylvrs/libmarshal": ">=1.4.3",
                 "valiant-bedrock/libscoreboard": ">=0.5.0"
             },
             "require-dev": {
@@ -146,7 +147,7 @@
                 "source": "https://github.com/Valiant-Bedrock/libgame/tree/master",
                 "issues": "https://github.com/Valiant-Bedrock/libgame/issues"
             },
-            "time": "2022-05-24T21:11:35+00:00"
+            "time": "2022-05-26T11:26:03+00:00"
         },
         {
             "name": "valiant-bedrock/libscoreboard",

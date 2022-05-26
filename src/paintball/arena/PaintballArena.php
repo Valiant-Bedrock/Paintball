@@ -13,19 +13,14 @@ declare(strict_types=1);
 
 namespace paintball\arena;
 
-use libgame\Arena;
-use pocketmine\math\AxisAlignedBB;
+use libgame\arena\Arena;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
 
 class PaintballArena extends Arena {
 
-	public function __construct(
-		World $world,
-		protected Vector3 $firstSpawnpoint,
-		protected Vector3 $secondSpawnpoint
-	) {
-		parent::__construct($world, AxisAlignedBB::one());
+	public function __construct(World $world, protected Vector3 $firstSpawnpoint, protected Vector3 $secondSpawnpoint, protected bool $generated = false) {
+		parent::__construct($world);
 	}
 
 	public static function create(PaintballArenaData $data): PaintballArena {
@@ -34,6 +29,10 @@ class PaintballArena extends Arena {
 			firstSpawnpoint: $data->getFirstSpawnpoint(),
 			secondSpawnpoint: $data->getSecondSpawnpoint()
 		);
+	}
+
+	public function isGenerated(): bool {
+		return $this->generated;
 	}
 
 	public function getFirstSpawnpoint(): Vector3 {
