@@ -13,11 +13,9 @@ declare(strict_types=1);
 
 namespace paintball\game;
 
-use Closure;
 use libgame\game\Game;
 use libgame\game\GameState;
 use libgame\game\GameStateHandler;
-use libgame\game\round\RoundState;
 use libgame\game\RoundBasedGame;
 use libgame\GameBase;
 use libgame\kit\Kit;
@@ -26,7 +24,6 @@ use libgame\team\Team;
 use libgame\team\TeamMode;
 use paintball\arena\PaintballArena;
 use paintball\entity\FlagEntity;
-use paintball\event\PlayerDeathEvent;
 use paintball\game\state\StartingStateHandler;
 use paintball\game\state\InGameStateHandler;
 use paintball\game\state\PostgameStateHandler;
@@ -35,9 +32,6 @@ use paintball\PaintballBase;
 use paintball\PaintballEventHandler;
 use paintball\utils\ArenaUtils;
 use pocketmine\entity\Location;
-use pocketmine\event\entity\EntityDamageByChildEntityEvent;
-use pocketmine\event\entity\EntityDamageByEntityEvent;
-use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\GameRulesChangedPacket;
 use pocketmine\network\mcpe\protocol\types\BoolGameRule;
@@ -108,6 +102,7 @@ class PaintballGame extends RoundBasedGame {
 				color: $color,
 				members: [$player]
 			));
+			$player->setNameTag($color . $player->getName());
 			$player->teleport($this->getLobbyWorld()->getSpawnLocation());
 			$player->getNetworkSession()->sendDataPacket(GameRulesChangedPacket::create([
 				"showCoordinates" => new BoolGameRule(true, true)
@@ -119,7 +114,8 @@ class PaintballGame extends RoundBasedGame {
 			$player->teleport($this->getArena()->getWorld()->getSpawnLocation());
 			$player->setGamemode(GameMode::SPECTATOR());
 		}
-		$this->broadcastMessage(TextFormat::YELLOW . "{$player->getName()} has joined the game!");
+		$player->sendMessage(TextFormat::YELLOW . "You have joined the match!");
+		$this->broadcastMessage(TextFormat::YELLOW . "{$player->getName()} has joined the match!");
 	}
 
 	public function handleQuit(Player $player): void {
@@ -136,10 +132,12 @@ class PaintballGame extends RoundBasedGame {
 			$teams = $this->getTeamManager()->getAll();
 			if(count($teams) === 1) {
 				$remainingTeam = $teams[array_key_first($teams)];
-				$this->broadcastMessage(TextFormat::YELLOW . "All members of $team have left the game! $remainingTeam wins!");
+				$this->broadcastMessage(TextFormat::YELLOW . "All members of $team have left the match! $remainingTeam wins!");
 				$this->setState(GameState::POSTGAME());
 			}
 		}
+		$player->sendMessage(TextFormat::YELLOW . "You have left the match!");
+		$this->broadcastMessage(TextFormat::YELLOW . "{$player->getName()} has left the match");
 	}
 
 	public function setTeamSpawnpoint(Team $team, Vector3 $spawnpoint): void {
@@ -185,8 +183,10 @@ class PaintballGame extends RoundBasedGame {
 	public function setupPlayer(Player $player): void {
 		$player->getInventory()->clearAll();
 		$player->getArmorInventory()->clearAll();
+		$player->getCursorInventory()->clearAll();
 		$player->setGamemode(GameMode::ADVENTURE());
 		$player->setHealth($player->getMaxHealth());
+		$player->setNameTagAlwaysVisible();
 	}
 
 	public function kill(Player $player): void {
@@ -195,6 +195,7 @@ class PaintballGame extends RoundBasedGame {
 		}
 		$player->getInventory()->clearAll();
 		$player->getArmorInventory()->clearAll();
+		$player->getCursorInventory()->clearAll();
 		$player->setGamemode(GameMode::SPECTATOR());
 		$this->getTeamManager()->setPlayerState($player, MemberState::DEAD());
 	}
@@ -205,11 +206,22 @@ class PaintballGame extends RoundBasedGame {
 		$this->eventHandler->unregister();
 
 		$this->executeOnAll(function(Player $player): void {
+			// Reset nametag
+			$player->setNameTag($player->getName());
+			$player->setNameTagAlwaysVisible(false);
 			$player->setGamemode(GameMode::ADVENTURE());
+			// Disable flight
 			$player->setAllowFlight(false);
 			$player->setFlying(false);
+			// Set health
 			$player->setMaxHealth(20);
 			$player->setHealth($player->getMaxHealth());
+
+			// Clear inventories
+			$player->getInventory()->clearAll();
+			$player->getArmorInventory()->clearAll();
+			$player->getCursorInventory()->clearAll();
+
 			$player->teleport($this->getPlugin()->getServer()->getWorldManager()->getDefaultWorld()?->getSafeSpawn() ?? throw new AssumptionFailedError("No default world"));
 			if($this->getSpectatorManager()->isSpectator($player)) {
 				$this->getSpectatorManager()->remove($player);
