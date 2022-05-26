@@ -1,7 +1,7 @@
 name: Paintball
 description: "A paintball gamemode made for Minecraft: Bedrock Edition"
 author: sylvrs
-version: 0.5.0
+version: 0.7.0
 api: [4.0.0]
 main: paintball\PaintballBase
 commands:
