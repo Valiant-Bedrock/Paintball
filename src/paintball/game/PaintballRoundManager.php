@@ -84,7 +84,7 @@ class PaintballRoundManager extends RoundManager {
 			$this->getGame()->broadcastMessage(TextFormat::GREEN . "$winner won round {$this->getCurrentRound()->getNumber()}!");
 			$this->setScore($winner, $this->getScore($winner) + 1);
 			$this->setState(RoundState::POSTROUND());
-		} elseif($this->getCurrentRound()->getTime() > $this->getRoundLength() || count($this->getGame()->getTeamManager()->getAliveTeams()) === 0) {
+		} elseif($this->getCurrentRound()->getTime() >= $this->getRoundLength() || count($this->getGame()->getTeamManager()->getAliveTeams()) === 0) {
 			$this->getGame()->broadcastMessage(TextFormat::GREEN . "Round {$this->getCurrentRound()->getNumber()} ended in a draw!");
 			$this->setState(RoundState::POSTROUND());
 		}
