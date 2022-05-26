@@ -65,7 +65,7 @@ class PostgameStateHandler extends GameStateHandler {
 			$this->getGame()->getPlugin()->getGameManager()->remove($this->getGame());
 
 			$this->getGame()->executeOnAll(function(Player $player): void {
-				$player->teleport($this->getGame()->getPlugin()->getServer()->getWorldManager()->getDefaultWorld()->getSafeSpawn());
+				$player->teleport($this->getGame()->getPlugin()->getServer()->getWorldManager()->getDefaultWorld()?->getSafeSpawn() ?? throw new AssumptionFailedError("No default world"));
 				if($this->getGame()->getSpectatorManager()->isSpectator($player)) {
 					$this->getGame()->getSpectatorManager()->remove($player);
 				}

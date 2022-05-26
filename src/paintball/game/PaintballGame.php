@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace paintball\game;
 
+use Closure;
 use libgame\game\Game;
 use libgame\game\GameState;
 use libgame\game\GameStateHandler;
@@ -165,9 +166,7 @@ class PaintballGame extends Game {
 			assert($damager instanceof Player);
 			$team = $entity->getTeam();
 			if($this->getTeamManager()->getTeam($damager) !== $team) {
-				$team->executeOnPlayers(function (Player $player): void {
-					$this->kill($player);
-				});
+				$team->executeOnPlayers(Closure::fromCallable([$this, "kill"]));
 				$this->broadcastMessage(TextFormat::RED . $damager->getName() . " has destroyed " . $team->getFormattedName() . TextFormat::RED . "'s flag!");
 			}
 		}
@@ -197,7 +196,10 @@ class PaintballGame extends Game {
 				VanillaItems::LEATHER_BOOTS()
 			],
 			"items" => [
-				0 => CustomItems::CROSSBOW()->addEnchantment(new EnchantmentInstance($map->fromId(EnchantmentIds::QUICK_CHARGE), 3)),
+				0 => CustomItems::CROSSBOW()->addEnchantment(new EnchantmentInstance(
+					enchantment: $map->fromId(EnchantmentIds::QUICK_CHARGE) ?? throw new AssumptionFailedError("Enchantment does not exist"),
+					level: 3
+				)),
 				8 => VanillaItems::ARROW()->setCount(16)
 			]
 		];

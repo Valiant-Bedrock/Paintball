@@ -42,7 +42,7 @@ class PaintballListener implements Listener {
 		$game->handleJoin($event->getPlayer());
 	}
 
-	public function getGameByPlayer(Player $player): ?Game {
+	public function getGameByPlayer(Player $player): ?PaintballGame {
 		foreach($this->plugin->getGameManager()->getAll() as $currentGame) {
 			if($currentGame->isInGame($player)) {
 				return $currentGame;
@@ -51,7 +51,7 @@ class PaintballListener implements Listener {
 		return null;
 	}
 
-	public function getGameByWorld(World $world): ?Game {
+	public function getGameByWorld(World $world): ?PaintballGame {
 		foreach($this->plugin->getGameManager()->getAll() as $currentGame) {
 			if($currentGame->getArena()->getWorld() === $world) {
 				return $currentGame;
