@@ -16,6 +16,8 @@ namespace paintball;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerChatEvent;
+use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
@@ -24,7 +26,16 @@ class PaintballListener implements Listener {
 
 	public function __construct(protected PaintballBase $plugin) {}
 
-	public function handleDamage(EntityDamageEvent $event) {
+
+	public function handleJoin(PlayerJoinEvent $event): void {
+		$event->setJoinMessage("");
+	}
+
+	public function handleQuit(PlayerQuitEvent $event): void {
+		$event->setQuitMessage("");
+	}
+
+	public function handleDamage(EntityDamageEvent $event): void {
 		$player = $event->getEntity();
 		if($player instanceof Player && $this->plugin->getGameManager()->getGameByPlayer($player) === null) {
 			$event->cancel();
