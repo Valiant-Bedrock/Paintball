@@ -223,12 +223,9 @@ class PaintballGame extends Game {
 		});
 	}
 
-	public function broadcastSound(Sound $sound) {
+	public function broadcastSound(Sound $sound): void {
 		$this->executeOnAll(function (Player $player) use($sound): void {
-			$packets = $sound->encode($player->getPosition());
-			foreach($packets as $packet) {
-				$player->getNetworkSession()->sendDataPacket($packet);
-			}
+			$player->getWorld()->addSound($player->getPosition(), $sound, [$player]);
 		});
 	}
 }

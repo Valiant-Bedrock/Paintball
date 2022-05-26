@@ -44,7 +44,7 @@ class PaintballListener implements Listener {
 
 	public function getGameByPlayer(Player $player): ?PaintballGame {
 		foreach($this->plugin->getGameManager()->getAll() as $currentGame) {
-			if($currentGame->isInGame($player)) {
+			if($currentGame instanceof PaintballGame && $currentGame->isInGame($player)) {
 				return $currentGame;
 			}
 		}
@@ -53,7 +53,7 @@ class PaintballListener implements Listener {
 
 	public function getGameByWorld(World $world): ?PaintballGame {
 		foreach($this->plugin->getGameManager()->getAll() as $currentGame) {
-			if($currentGame->getArena()->getWorld() === $world) {
+			if($currentGame instanceof PaintballGame && $currentGame->getArena()->getWorld() === $world) {
 				return $currentGame;
 			}
 		}
