@@ -115,11 +115,13 @@ class PaintballBase extends GameBase {
 					$sender->sendMessage("You must be a player to use this command.");
 					return true;
 				}
+				/** @var ?PaintballArena $arena */
 				$arena = $this->getArenaManager()->findOpenArena();
 				if($arena === null) {
 					$sender->sendMessage(TextFormat::YELLOW . "There are no open arenas at the moment. Attempting to generate one...");
 					$this->generateArena(
 						onSuccess: function(Arena $arena) use($sender): void {
+							/** @var PaintballArena $arena */
 							$game = new PaintballGame(plugin: $this, uniqueId: uniqid(), arena: $arena, lobbyWorld: $this->createLobby(), kit: PaintballKits::VANILLA());
 							$this->getGameManager()->add($game);
 							$this->setDefaultGame($game);
@@ -135,6 +137,7 @@ class PaintballBase extends GameBase {
 				$game = new PaintballGame(plugin: $this, uniqueId: uniqid(), arena: $arena, lobbyWorld: $this->createLobby(), kit: PaintballKits::VANILLA());
 				$this->getGameManager()->add($game);
 				$this->setDefaultGame($game);
+				break;
 			case "join":
 				if(!$sender instanceof Player) {
 					$sender->sendMessage("You must be a player to use this command.");
@@ -145,6 +148,8 @@ class PaintballBase extends GameBase {
 					return true;
 				}
 
+				/** @var array<PaintballGame> $games */
+				$games = array_values($this->getGameManager()->getAll());
 				$form = new SimpleForm(
 					title: "Game Selector",
 					buttons: array_map(
@@ -153,7 +158,7 @@ class PaintballBase extends GameBase {
 							onClick: function (Player $player) use($game): void {
 								$game->handleJoin($player);
 							}),
-						array: array_values($this->getGameManager()->getAll())
+						array: $games
 					)
 				);
 				$form->send($sender);

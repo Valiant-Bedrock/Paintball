@@ -19,14 +19,16 @@ use FilesystemIterator;
 use paintball\PaintballBase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
+use SplFileInfo;
 
 final class ArenaUtils {
 
 	public static function copyDirectory(string $source, string $destination): bool {
 		try {
-			$dir = opendir($source);
+			$directory = opendir($source) ?: throw new RuntimeException("Unable to open source directory $source");
 			@mkdir($destination);
-			while(($file = readdir($dir))) {
+			while(($file = readdir($directory))) {
 				if ($file !== "." && $file !== "..") {
 					if (is_dir("$source/$file") ) {
 						self::copyDirectory("$source/$file", "$destination/$file");
@@ -35,7 +37,7 @@ final class ArenaUtils {
 					}
 				}
 			}
-			closedir($dir);
+			closedir($directory);
 			return true;
 		} catch(Exception $exception) {
 			var_dump($exception->getMessage());
@@ -43,12 +45,13 @@ final class ArenaUtils {
 		}
 	}
 
-	public static function deleteDirectory(string $directory) {
+	public static function deleteDirectory(string $directory): void {
 		$files = new RecursiveIteratorIterator(
 			iterator: new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
 			mode: RecursiveIteratorIterator::CHILD_FIRST
 		);
 
+		/** @var SplFileInfo $fileInfo */
 		foreach ($files as $fileInfo) {
 			$todo = ($fileInfo->isDir() ? "rmdir" : "unlink");
 			$todo($fileInfo->getRealPath());
@@ -57,6 +60,9 @@ final class ArenaUtils {
 		rmdir($directory);
 	}
 
+	/**
+	 * @return array<string>
+	 */
 	public static function getTemplates(): array {
 		$templates = [];
 		foreach(new DirectoryIterator(PaintballBase::getInstance()->getDataFolder() . "arena_templates") as $file) {
