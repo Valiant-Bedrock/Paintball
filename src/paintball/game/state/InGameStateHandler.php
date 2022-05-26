@@ -17,6 +17,8 @@ use libgame\game\GameStateHandler;
 use libgame\team\Team;
 use paintball\arena\PaintballArena;
 use paintball\game\PaintballGame;
+use paintball\TeamFlagEntity;
+use pocketmine\entity\Location;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
@@ -44,6 +46,11 @@ class InGameStateHandler extends GameStateHandler {
 				$player->setMaxHealth(PaintballGame::MAX_HEALTH);
 				$player->setImmobile();
 			});
+
+			$world = $this->getGame()->getArena()->getWorld();
+			$entity = new TeamFlagEntity(Location::fromObject($spawnpoint->add(0, 2, 0), $world), $team, null);
+			$entity->setNameTag($team->getFormattedName() . "'s Flag");
+			$entity->spawnToAll();
 		});
 	}
 

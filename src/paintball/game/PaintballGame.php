@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 namespace paintball\game;
 
-use Cassandra\Custom;
 use libgame\game\Game;
 use libgame\game\GameState;
 use libgame\game\GameStateHandler;
@@ -28,8 +27,13 @@ use paintball\game\state\InGameStateHandler;
 use paintball\game\state\PostgameStateHandler;
 use paintball\game\state\WaitingStateHandler;
 use paintball\item\CustomItems;
+use paintball\TeamFlagEntity;
+use pocketmine\data\bedrock\EnchantmentIdMap;
+use pocketmine\data\bedrock\EnchantmentIds;
 use pocketmine\event\entity\EntityDamageByChildEntityEvent;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\item\enchantment\EnchantmentInstance;
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
 use pocketmine\math\Vector3;
@@ -39,6 +43,9 @@ use pocketmine\player\GameMode;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
+use pocketmine\world\sound\NoteInstrument;
+use pocketmine\world\sound\NoteSound;
+use pocketmine\world\sound\Sound;
 
 class PaintballGame extends Game {
 
@@ -91,16 +98,23 @@ class PaintballGame extends Game {
 	}
 
 	public function handleJoin(Player $player): void {
-		[$id, $color] = $this->getTeamManager()->generateTeamData();
-		$this->getTeamManager()->add(new Team(
-			id: $id,
-			color: $color,
-			members: [$player]
-		));
-		$player->getNetworkSession()->sendDataPacket(GameRulesChangedPacket::create([
-			"showCoordinates" => new BoolGameRule(true, true)
-		]));
-		$this->getScoreboardManager()->add($player);
+		if(count($this->getTeamManager()->getAll()) < 2) {
+			[$id, $color] = $this->getTeamManager()->generateTeamData();
+			$this->getTeamManager()->add(new Team(
+				id: $id,
+				color: $color,
+				members: [$player]
+			));
+			$player->getNetworkSession()->sendDataPacket(GameRulesChangedPacket::create([
+				"showCoordinates" => new BoolGameRule(true, true)
+			]));
+			$this->getScoreboardManager()->add($player);
+		} else {
+			$this->getSpectatorManager()->add($player);
+			$this->getScoreboardManager()->add($player);
+			$player->teleport($this->getArena()->getWorld()->getSpawnLocation());
+			$player->setGamemode(GameMode::SPECTATOR());
+		}
 	}
 
 	public function handleQuit(Player $player): void {}
@@ -122,33 +136,59 @@ class PaintballGame extends Game {
 	}
 
 	public function handleEntityDamage(EntityDamageEvent $event): void {
-		$player = $event->getEntity();
-		assert($player instanceof Player);
-		$team = $this->getTeamManager()->getTeam($player);
-		if($team === null) {
-			return;
-		}
-		if(!$event instanceof EntityDamageByChildEntityEvent) {
-			$event->cancel();
-			return;
-		}
+		$entity = $event->getEntity();
+		if($entity instanceof Player) {
+			$team = $this->getTeamManager()->getTeam($entity);
+			if($team === null) {
+				return;
+			}
+			if(!$event instanceof EntityDamageByChildEntityEvent) {
+				$event->cancel();
+				return;
+			}
 
-		if($event->getFinalDamage() >= $player->getHealth()) {
+			$damager = $event->getDamager();
+			assert($damager instanceof Player);
+			$this->getArena()->getWorld()->addSound($damager->getPosition(), new NoteSound(NoteInstrument::PIANO(), 127), [$damager]);
+
 			$event->cancel();
-			$deathEvent = new PlayerDeathEvent($player);
+			$deathEvent = new PlayerDeathEvent($entity);
 			$deathEvent->call();
 
-			$player->getInventory()->clearAll();
-			$player->getArmorInventory()->clearAll();
-			$player->setGamemode(GameMode::SPECTATOR());
-			$this->getTeamManager()->setPlayerState($player, MemberState::DEAD());
+			$this->kill($entity);
+		} elseif($entity instanceof TeamFlagEntity && $event instanceof EntityDamageByEntityEvent) {
+			$event->cancel();
+			if($event instanceof EntityDamageByChildEntityEvent) {
+				return;
+			}
+			$damager = $event->getDamager();
+			assert($damager instanceof Player);
+			$team = $entity->getTeam();
+			if($this->getTeamManager()->getTeam($damager) !== $team) {
+				$team->executeOnPlayers(function (Player $player): void {
+					$this->kill($player);
+				});
+				$this->broadcastMessage(TextFormat::RED . $damager->getName() . " has destroyed " . $team->getFormattedName() . TextFormat::RED . "'s flag!");
+			}
 		}
+
+	}
+
+	public function kill(Player $player): void {
+		if(!$this->getTeamManager()->hasTeam($player)) {
+			return;
+		}
+		$player->getInventory()->clearAll();
+		$player->getArmorInventory()->clearAll();
+		$player->setGamemode(GameMode::SPECTATOR());
+		$this->getTeamManager()->setPlayerState($player, MemberState::DEAD());
 	}
 
 	/**
 	 * @return array{armor: array<Item>, items: array<Item>}
 	 */
 	public function getKit(): array {
+		$map = EnchantmentIdMap::getInstance();
 		return [
 			"armor" => [
 				VanillaItems::LEATHER_CAP(),
@@ -157,7 +197,7 @@ class PaintballGame extends Game {
 				VanillaItems::LEATHER_BOOTS()
 			],
 			"items" => [
-				0 => CustomItems::CROSSBOW(),
+				0 => CustomItems::CROSSBOW()->addEnchantment(new EnchantmentInstance($map->fromId(EnchantmentIds::QUICK_CHARGE), 3)),
 				8 => VanillaItems::ARROW()->setCount(16)
 			]
 		];
@@ -178,6 +218,15 @@ class PaintballGame extends Game {
 	public function broadcastPopup(string $popup): void {
 		$this->executeOnAll(function(Player $player) use ($popup): void {
 			$player->sendPopup($popup);
+		});
+	}
+
+	public function broadcastSound(Sound $sound) {
+		$this->executeOnAll(function (Player $player) use($sound): void {
+			$packets = $sound->encode($player->getPosition());
+			foreach($packets as $packet) {
+				$player->getNetworkSession()->sendDataPacket($packet);
+			}
 		});
 	}
 }

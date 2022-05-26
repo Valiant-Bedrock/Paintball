@@ -72,6 +72,9 @@ class PostgameStateHandler extends GameStateHandler {
 				if($this->getGame()->isUnassociatedPlayer($player)) {
 					$this->getGame()->removeUnassociatedPlayer($player);
 				}
+				$scoreboard = $this->getGame()->getScoreboardManager()->get($player);
+				$scoreboard->remove();
+				$this->getGame()->getScoreboardManager()->remove($player);
 			});
 
 			$this->getGame()->executeOnTeams(function(Team $team): void { $this->getGame()->getTeamManager()->remove($team); });

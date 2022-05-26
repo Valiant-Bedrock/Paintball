@@ -16,9 +16,15 @@ namespace paintball\game;
 use libgame\game\GameState;
 use libgame\team\member\MemberState;
 use libgame\team\Team;
+use paintball\TeamFlagEntity;
+use pocketmine\entity\Location;
+use pocketmine\entity\projectile\Arrow;
 use pocketmine\player\GameMode;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
+use pocketmine\world\sound\ClickSound;
+use pocketmine\world\sound\NoteInstrument;
+use pocketmine\world\sound\NoteSound;
 
 class RoundManager {
 	public const ROUND_COUNT = 10;
@@ -95,7 +101,16 @@ class RoundManager {
 			TextFormat::YELLOW . "Round {$this->current->getRoundNumber()} has started!" :
 			TextFormat::YELLOW . "Round {$this->current->getRoundNumber()} starting in $this->roundCountdown..."
 		);
+
+		if($this->roundCountdown > 0 && $this->roundCountdown < 3) {
+			$this->getGame()->broadcastSound(new ClickSound($this->roundCountdown));
+		}
+
 		if($this->roundCountdown <= 0) {
+			$this->getGame()->broadcastSound(new NoteSound(
+				instrument: NoteInstrument::PIANO(),
+				note: 127
+			));
 			$this->state = RoundState::IN_GAME();
 			$this->getGame()->executeOnPlayers(function(Player $player): void {
 				$player->setImmobile(false);
@@ -118,6 +133,9 @@ class RoundManager {
 			$this->getGame()->broadcastMessage(TextFormat::GREEN . "{$winner->getFormattedName()}" . TextFormat::GREEN . " won round {$this->getCurrentRound()->getRoundNumber()}!");
 			$this->setScore($winner, $this->getScore($winner) + 1);
 			$this->state = RoundState::ENDING();
+		} elseif(count($this->getGame()->getTeamManager()->getAliveTeams()) === 0) {
+			$this->getGame()->broadcastMessage(TextFormat::GREEN . "Rounded {$this->getCurrentRound()->getRoundNumber()} in a draw!");
+			$this->state = RoundState::ENDING();
 		}
 		$this->getCurrentRound()->incrementTime();
 	}
@@ -129,6 +147,13 @@ class RoundManager {
 			$this->getGame()->setState(GameState::POSTGAME());
 			return;
 		}
+
+		foreach($this->getGame()->getArena()->getWorld()->getEntities() as $entity) {
+			if($entity instanceof TeamFlagEntity || $entity instanceof Arrow) {
+				$entity->close();
+			}
+		}
+
 		$this->getGame()->executeOnTeams(function(Team $team): void {
 			$spawnpoint = $this->getGame()->getTeamSpawnpoint($team->getId());
 			$team->executeOnPlayers(function(Player $player) use($spawnpoint): void {
@@ -138,7 +163,12 @@ class RoundManager {
 				$this->setupPlayer($player);
 				$player->setImmobile(true);
 			});
+			$world = $this->getGame()->getArena()->getWorld();
+			$entity = new TeamFlagEntity(Location::fromObject($spawnpoint->add(0, 2, 0), $world), $team, null);
+			$entity->setNameTag($team->getFormattedName() . "'s Flag");
+			$entity->spawnToAll();
 		});
+
 		$this->state = RoundState::WAITING();
 		$this->roundCountdown = self::COUNTDOWN_LENGTH;
 		$this->current = new Round(roundNumber: $this->current->getRoundNumber() + 1);

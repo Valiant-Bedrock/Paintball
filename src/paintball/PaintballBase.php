@@ -21,10 +21,15 @@ use paintball\arena\PaintballArenaManager;
 use paintball\game\PaintballGame;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
+use pocketmine\entity\EntityDataHelper as Helper;
+use pocketmine\entity\EntityFactory;
+use pocketmine\entity\Human;
 use pocketmine\math\AxisAlignedBB;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
+use pocketmine\world\World;
 
 // Import dependencies
 require_once dirname(__DIR__, 2) . "/vendor/autoload.php";

@@ -20,6 +20,7 @@ use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
+use pocketmine\world\World;
 
 class PaintballListener implements Listener {
 
@@ -50,15 +51,22 @@ class PaintballListener implements Listener {
 		return null;
 	}
 
+	public function getGameByWorld(World $world): ?Game {
+		foreach($this->plugin->getGameManager()->getAll() as $currentGame) {
+			if($currentGame->getArena()->getWorld() === $world) {
+				return $currentGame;
+			}
+		}
+		return null;
+	}
+
 	public function handleEntityDamage(EntityDamageEvent $event): void {
 		$entity = $event->getEntity();
-		if(!$entity instanceof Player) {
-			return;
+		if($entity instanceof Player && ($game = $this->getGameByPlayer($entity)) !== null) {
+			$game->handleEntityDamage($event);
+		} elseif(($game = $this->getGameByWorld($entity->getWorld())) !== null) {
+			$game->handleEntityDamage($event);
 		}
-		if(($game = $this->getGameByPlayer($entity)) === null) {
-			return;
-		}
-		$game->handleEntityDamage($event);
 	}
 
 }
