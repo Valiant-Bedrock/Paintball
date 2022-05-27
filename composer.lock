@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f7992a4ff9950c4144f448f2a78c2b0b",
+    "content-hash": "22498657e23166b95d788801310c8863",
     "packages": [
         {
             "name": "sylvrs/libmarshal",
@@ -105,12 +105,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:Valiant-Bedrock/libgame.git",
-                "reference": "12eb2393b7f55129a7279ce01b751559ff3f3a41"
+                "reference": "0b5739c30a725cbd9ec702b327cd3ed76b8582be"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/12eb2393b7f55129a7279ce01b751559ff3f3a41",
-                "reference": "12eb2393b7f55129a7279ce01b751559ff3f3a41",
+                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/0b5739c30a725cbd9ec702b327cd3ed76b8582be",
+                "reference": "0b5739c30a725cbd9ec702b327cd3ed76b8582be",
                 "shasum": ""
             },
             "require": {
@@ -147,7 +147,7 @@
                 "source": "https://github.com/Valiant-Bedrock/libgame/tree/master",
                 "issues": "https://github.com/Valiant-Bedrock/libgame/issues"
             },
-            "time": "2022-05-26T11:26:03+00:00"
+            "time": "2022-05-26T22:40:28+00:00"
         },
         {
             "name": "valiant-bedrock/libscoreboard",

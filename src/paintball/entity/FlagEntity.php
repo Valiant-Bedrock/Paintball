@@ -22,8 +22,8 @@ use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
 class FlagEntity extends Entity {
 
-	public const SCALE = 0.5;
-	public const TURN_DEGREE_AMOUNT = 3;
+	public const SCALE = 0.75;
+	public static int $YAW_TURN_SPEED = 3;
 
 	public function __construct(Location $location, protected Team $team, ?CompoundTag $nbt = null) {
 		parent::__construct($location, $nbt);
@@ -47,7 +47,7 @@ class FlagEntity extends Entity {
 	}
 
 	protected function tryChangeMovement(): void {
-		$this->setRotation(($this->location->yaw + self::TURN_DEGREE_AMOUNT) % 360, $this->location->pitch);
+		$this->setRotation($this->location->yaw + self::$YAW_TURN_SPEED, $this->location->pitch);
 	}
 
 	public function getTeam(): Team {

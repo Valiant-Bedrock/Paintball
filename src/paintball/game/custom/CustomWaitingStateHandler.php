@@ -11,32 +11,18 @@
  */
 declare(strict_types=1);
 
-namespace paintball\game\state;
+namespace paintball\game\custom;
 
-use libgame\game\GameState;
-use libgame\game\GameStateHandler;
 use paintball\game\PaintballGame;
+use paintball\game\state\WaitingStateHandler;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 
-class WaitingStateHandler extends GameStateHandler {
-
-	public function handleSetup(): void {
-		foreach($this->game->getArena()->getWorld()->getEntities() as $entity) {
-			if(!$entity instanceof Player) {
-				$entity->close();
-			}
-		}
-	}
+class CustomWaitingStateHandler extends WaitingStateHandler {
 
 	public function handleTick(int $currentStateTime): void {
 		/** @var PaintballGame $game */
 		$game = $this->getGame();
-		if(count($game->getTeamManager()->getAll()) === 2) {
-			$game->broadcastMessage(TextFormat::GREEN . "Team limit reached! Starting game...");
-			$game->setState(GameState::STARTING());
-			return;
-		}
 
 		$game->executeOnAll(function (Player $player) use($game): void {
 			$scoreboard = $game->getScoreboardManager()->get($player);
@@ -48,6 +34,4 @@ class WaitingStateHandler extends GameStateHandler {
 			]);
 		});
 	}
-
-	public function handleFinish(): void {}
 }

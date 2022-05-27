@@ -15,19 +15,31 @@ namespace paintball;
 
 use Closure;
 use libforms\buttons\Button;
+use libforms\CustomForm;
+use libforms\elements\Input;
+use libforms\elements\Label;
 use libforms\SimpleForm;
 use libgame\arena\Arena;
 use libgame\arena\ArenaManager;
 use libgame\game\GameState;
 use libgame\GameBase;
+use libgame\menu\HotbarMenu;
+use libgame\menu\MenuEntry;
+use libgame\team\TeamMode;
+use libgame\utilities\DeployableClosure;
+use libscoreboard\Scoreboard;
 use paintball\arena\PaintballArena;
 use paintball\arena\PaintballArenaCreator;
 use paintball\arena\PaintballArenaManager;
+use paintball\entity\FlagEntity;
+use paintball\form\CustomSettingsForm;
+use paintball\game\custom\CustomPaintballGame;
 use paintball\game\PaintballGame;
 use paintball\item\PaintballKits;
 use paintball\utils\ArenaUtils;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
+use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat;
@@ -38,17 +50,22 @@ require_once dirname(__DIR__, 2) . "/vendor/autoload.php";
 
 class PaintballBase extends GameBase {
 
+	public const TITLE = TextFormat::RED . TextFormat::BOLD . "PAINTBALL";
+
 	public const LOBBIES_WORLD_PATH = "lobbies/";
 	public const GENERATED_WORLD_PATH = "generated/";
 
 	protected static PaintballBase $instance;
 
-	protected ?PaintballGame $defaultGame = null;
+
+	protected PaintballLobbyEventHandler $lobbyEventHandler;
+	protected HotbarMenu $lobbyMenu;
+	/** @var array<string, Scoreboard> */
+	protected array $scoreboards = [];
+	protected DeployableClosure $scoreboardUpdate;
 
 	protected function onLoad(): void {
 		self::$instance = $this;
-
-		$this->getServer()->getWorldManager()->loadWorld("lobby", true);
 		parent::onLoad();
 	}
 
@@ -58,13 +75,27 @@ class PaintballBase extends GameBase {
 		@mkdir($this->getServer()->getDataPath() . "worlds/" . self::GENERATED_WORLD_PATH);
 		@mkdir($this->getServer()->getDataPath() . "worlds/" . self::LOBBIES_WORLD_PATH);
 
-		$this->getServer()->getPluginManager()->registerEvents(
-			listener: new PaintballListener($this),
-			plugin: $this
+		$this->scoreboardUpdate = new DeployableClosure(
+			closure: Closure::fromCallable([$this, "updateLobbyScoreboard"]),
+			scheduler: $this->getScheduler()
 		);
+		$this->scoreboardUpdate->deploy(20);
+
+		$this->lobbyEventHandler = new PaintballLobbyEventHandler($this);
+		$this->lobbyEventHandler->register($this);
+
+		$this->getServer()->getPluginManager()->registerEvents(listener: new PaintballListener($this), plugin: $this);
 	}
 
 	protected function onDisable() : void {
+		$this->clearScoreboards();
+		$this->scoreboardUpdate->cancel();
+		// Unload existing worlds
+		foreach($this->getServer()->getWorldManager()->getWorlds() as $world) {
+			if(str_contains(haystack: $world->getFolderName(), needle: self::GENERATED_WORLD_PATH) || str_contains(haystack: $world->getFolderName(), needle: self::LOBBIES_WORLD_PATH)) {
+				$this->getServer()->getWorldManager()->unloadWorld($world);
+			}
+		}
 		ArenaUtils::deleteDirectory($this->getServer()->getDataPath() . "worlds/" . self::GENERATED_WORLD_PATH);
 	}
 
@@ -72,32 +103,8 @@ class PaintballBase extends GameBase {
 		return self::$instance;
 	}
 
-	public function getDefaultGame(): ?PaintballGame {
-		return $this->defaultGame;
-	}
-
-	public function setDefaultGame(?PaintballGame $game): void {
-		$this->defaultGame = $game;
-	}
-
-	public function hasDefaultGame(): bool {
-		return $this->defaultGame instanceof PaintballGame;
-	}
-
 	public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
 		switch(strtolower($label)) {
-			case "start":
-				if(!$sender instanceof Player) {
-					$sender->sendMessage("You must be a player to use this command.");
-					return true;
-				}
-				if(!$this->hasDefaultGame()) {
-					$sender->sendMessage("There is no default game set.");
-					return true;
-				}
-
-				$this->getDefaultGame()?->start();
-				return true;
 			case "createarena":
 				if(!$sender instanceof Player) {
 					$sender->sendMessage("You must be a player to use this command.");
@@ -110,61 +117,102 @@ class PaintballBase extends GameBase {
 				$creator = new PaintballArenaCreator(creator: $sender, plugin: $this);
 				$creator->start();
 				return true;
-			case "creategame":
-				if(!$sender instanceof Player) {
-					$sender->sendMessage("You must be a player to use this command.");
-					return true;
-				}
-				/** @var ?PaintballArena $arena */
-				$arena = $this->getArenaManager()->findOpenArena();
-				if($arena === null) {
-					$sender->sendMessage(TextFormat::YELLOW . "There are no open arenas at the moment. Attempting to generate one...");
-					$this->generateArena(
-						onSuccess: function(Arena $arena) use($sender): void {
-							/** @var PaintballArena $arena */
-							$game = new PaintballGame(plugin: $this, uniqueId: uniqid(), arena: $arena, lobbyWorld: $this->createLobby(), kit: PaintballKits::VANILLA());
-							$this->getGameManager()->add($game);
-							$this->setDefaultGame($game);
-							$game->handleJoin($sender);
-						},
-						onFailure: function(string $errorMessage) use($sender): void {
-							$sender->sendMessage(TextFormat::RED . "Failed to generate an arena: $errorMessage");
-						}
-					);
-					return true;
-				}
-				$this->getArenaManager()->setOccupied($arena, true);
-				$game = new PaintballGame(plugin: $this, uniqueId: uniqid(), arena: $arena, lobbyWorld: $this->createLobby(), kit: PaintballKits::VANILLA());
-				$this->getGameManager()->add($game);
-				$this->setDefaultGame($game);
+			case "setspeed":
+				FlagEntity::$YAW_TURN_SPEED = intval($args[0] ?? FlagEntity::$YAW_TURN_SPEED);
 				break;
-			case "join":
+			case "settings":
 				if(!$sender instanceof Player) {
 					$sender->sendMessage("You must be a player to use this command.");
 					return true;
 				}
-				if($this->getGameManager()->getGameByPlayer($sender) !== null) {
-					$sender->sendMessage(TextFormat::RED . "You can't use this command while in a game");
+				$game = $this->getGameManager()->getGameByPlayer($sender);
+				if(!$game instanceof CustomPaintballGame) {
+					$sender->sendMessage(TextFormat::RED . "You must be in a custom game to use this command.");
 					return true;
 				}
-
-				/** @var array<PaintballGame> $games */
-				$games = array_values($this->getGameManager()->getAll());
-				$form = new SimpleForm(
-					title: "Game Selector",
-					buttons: array_map(
-						callback: fn(PaintballGame $game) => new Button(
-							text: TextFormat::YELLOW . "Game ({$game->getKit()->getName()})" . TextFormat::WHITE . "[" . $this->getNameFromState($game->getState()) . TextFormat::WHITE . "]",
-							onClick: function (Player $player) use($game): void {
-								$game->handleJoin($player);
-							}),
-						array: $games
-					)
-				);
+				if($game->getLeader() !== $sender) {
+					$sender->sendMessage(TextFormat::RED . "You must be the leader to use this command.");
+					return true;
+				}
+				$form = new CustomSettingsForm($game);
 				$form->send($sender);
-				return true;
 		}
 		return true;
+	}
+
+	/**
+	 * @return array<string>
+	 */
+	public function getScoreboardData(): array {
+		return [
+			0 => "------------------",
+			1 => TextFormat::WHITE . "Active Games: " . TextFormat::YELLOW . count($this->getGameManager()->getAll()),
+			2 => "------------------",
+			3 => TextFormat::YELLOW . "valiantnetwork.xyz",
+		];
+	}
+
+	/**
+	 * @return array<Player>
+	 */
+	public function getLobbyPlayers(): array {
+		return array_filter(
+			array: $this->getServer()->getOnlinePlayers(),
+			callback: fn(Player $player) => $this->getGameManager()->getGameByPlayer($player) === null
+		);
+	}
+
+	/**
+	 * Gets or creates a lobby scoreboard for a player
+	 *
+	 * @param Player $player
+	 * @return Scoreboard
+	 */
+	public function getScoreboard(Player $player): Scoreboard {
+		return $this->scoreboards[$player->getUniqueId()->getBytes()] ??= new Scoreboard(
+			player: $player,
+			title: self::TITLE,
+			lines: $this->getScoreboardData()
+		);
+	}
+
+	/**
+	 * Removes the lobby scoreboard for the given player
+	 *
+	 * @param Player $player
+	 * @return void
+	 */
+	public function removeScoreboard(Player $player): void {
+		if(!isset($this->scoreboards[$player->getUniqueId()->getBytes()])) {
+			return;
+		}
+		$scoreboard = $this->getScoreboard($player);
+		$scoreboard->remove();
+		unset($this->scoreboards[$player->getUniqueId()->getBytes()]);
+	}
+
+	/**
+	 * Removes all scoreboards for all players
+	 *
+	 * @return void
+	 */
+	public function clearScoreboards(): void {
+		foreach($this->scoreboards as $key => $scoreboard) {
+			$scoreboard->remove();
+			unset($this->scoreboards[$key]);
+		}
+	}
+
+	public function updateLobbyScoreboard(): void {
+		foreach($this->getLobbyPlayers() as $player) {
+			$scoreboard = $this->getScoreboard($player);
+			$scoreboard->setLines($this->getScoreboardData());
+			if(!$scoreboard->isVisible()) {
+				$scoreboard->send();
+			} else {
+				$scoreboard->update();
+			}
+		}
 	}
 
 	public function getNameFromState(GameState $state): string {
@@ -182,7 +230,7 @@ class PaintballBase extends GameBase {
 	 * @param Closure(string): void $onFailure
 	 * @return void
 	 */
-	protected function generateArena(Closure $onSuccess, Closure $onFailure): void {
+	public function generateArena(Closure $onSuccess, Closure $onFailure): void {
 		// Pick template
 		$templates = ArenaUtils::getTemplates();
 		$template = $templates[array_rand($templates)];
@@ -205,7 +253,13 @@ class PaintballBase extends GameBase {
 		/** @var PaintballArenaManager $arenaManager */
 		$arenaManager = $this->getArenaManager();
 		$data = $arenaManager->getArenaDataByWorldName($template) ?? throw new AssumptionFailedError("Arena data for $template does not exist.");
-		$arena = new PaintballArena(world: $world, firstSpawnpoint: $data->getFirstSpawnpoint(), secondSpawnpoint: $data->getSecondSpawnpoint(), generated: true);
+		$arena = new PaintballArena(
+			name: $data->getName(),
+			world: $world,
+			firstSpawnpoint: $data->getFirstSpawnpoint(),
+			secondSpawnpoint: $data->getSecondSpawnpoint(),
+			generated: true
+		);
 		$onSuccess($arena);
 	}
 
@@ -218,5 +272,96 @@ class PaintballBase extends GameBase {
 		ArenaUtils::copyDirectory($this->getDataFolder() . "lobby", $this->getServer()->getDataPath() . "worlds/$lobbyPath");
 		$this->getServer()->getWorldManager()->loadWorld($lobbyPath);
 		return $this->getServer()->getWorldManager()->getWorldByName($lobbyPath) ?? throw new AssumptionFailedError("World $lobbyPath does not exist.");
+	}
+
+	public function getHotbarMenu(): HotbarMenu {
+		return $this->lobbyMenu ??= new HotbarMenu([
+			0 => new MenuEntry(
+				item: VanillaItems::BOOK()->setCustomName(TextFormat::YELLOW . "Game Selector"),
+				closure: function(Player $player): void {
+					if($this->getGameManager()->getGameByPlayer($player) !== null) {
+						return;
+					}
+					/** @var array<PaintballGame> $games */
+					$games = array_values(array_filter(
+						array: $this->getGameManager()->getAll(),
+						callback: fn(PaintballGame $game): bool => !$game instanceof CustomPaintballGame
+					));
+					$form = new SimpleForm(
+						title: "Game Selector",
+						buttons: array_map(
+							callback: fn(PaintballGame $game) => new Button(
+								text: TextFormat::YELLOW . "Game" . TextFormat::EOL . "Kit: " . TextFormat::LIGHT_PURPLE . $game->getKit()->getName() . TextFormat::YELLOW .  " | " . "State: " . $this->getNameFromState($game->getState()),
+								onClick: function (Player $player) use($game): void {
+									$this->removeScoreboard($player);
+									$game->handleJoin($player);
+								}),
+							array: $games
+						)
+					);
+					$form->send($player);
+				}
+			),
+			1 => new MenuEntry(
+				item: VanillaItems::PAPER()->setCustomName(TextFormat::YELLOW . "Create Game"),
+				closure: function(Player $player): void {
+					if(!$player->hasPermission((string) PaintballPermissions::CREATE())) {
+						$player->sendMessage(TextFormat::RED . "You do not have permission to create games.");
+						return;
+					}
+					$arena = $this->getArenaManager()->findOpenArena();
+					if($arena !== null) {
+						$this->getArenaManager()->setOccupied($arena, true);
+						$game = new CustomPaintballGame(plugin: $this, uniqueId: uniqid(), arena: $arena, teamMode: TeamMode::SOLO(), lobbyWorld: $this->createLobby(), kit: PaintballKits::VANILLA(), leader: $player);
+						$this->getGameManager()->add($game);
+					} else {
+						$player->sendMessage(TextFormat::YELLOW . "There are no open arenas at the moment. Attempting to generate one...");
+						$this->generateArena(
+							onSuccess: function(Arena $arena) use($player): void {
+								/** @var PaintballArena $arena */
+								$game = new CustomPaintballGame(plugin: $this, uniqueId: uniqid(), arena: $arena, teamMode: TeamMode::SOLO(), lobbyWorld: $this->createLobby(), kit: PaintballKits::VANILLA(), leader: $player);
+								$this->getGameManager()->add($game);
+								$player->sendMessage(TextFormat::GREEN . "Game generated successfully!");
+								$game->handleJoin($player);
+							},
+							onFailure: function(string $errorMessage) use($player): void {
+								$player->sendMessage(TextFormat::RED . "Failed to generate an arena: $errorMessage");
+							}
+						);
+					}
+
+				}
+			),
+			2 => new MenuEntry(
+				item: VanillaItems::NETHER_STAR()->setCustomName(TextFormat::YELLOW . "Join Custom Game"),
+				closure: function(Player $player): void {
+					$form = new CustomForm(
+						title: "Join Custom Game",
+						elements: [
+							new Label(text: TextFormat::YELLOW . "Enter the creator's name of the game you want to join."),
+							new Input(text: "Leader Name", placeholder: "Leader Name", default: "", callable: function(string $name) use($player): void {
+								if($name === "") {
+									$player->sendMessage(TextFormat::RED . "Name field can't be empty!");
+									return;
+								}
+								$creator = $this->getServer()->getPlayerByPrefix($name);
+								if(!$creator instanceof Player) {
+									$player->sendMessage(TextFormat::RED . "Unable to locate player with the name '$name'.");
+									return;
+								}
+								$game = $this->getGameManager()->getGameByPlayer($creator);
+								if(!$game instanceof CustomPaintballGame) {
+									$player->sendMessage(TextFormat::RED . "{$creator->getName()} is not in a custom game.");
+									return;
+								}
+								$player->sendMessage(TextFormat::YELLOW . "Successfully found custom game! Joining...");
+								$game->handleJoin($player);
+							})
+						],
+					);
+					$form->send($player);
+				}
+			)
+		]);
 	}
 }

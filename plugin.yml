@@ -21,3 +21,11 @@ commands:
     description: "Joins the default game"
     usage: /join
     permission: pocketmine.group.user
+  setspeed:
+    description: "Sets the flag turning speed"
+    usage: /setspeed <speed>
+    permission: pocketmine.group.operator
+  settings:
+    description: "Shows a custom game settings menu to the leader"
+    usage: /settings
+    permission: pocketmine.group.operator

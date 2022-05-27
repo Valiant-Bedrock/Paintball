@@ -15,22 +15,27 @@ namespace paintball;
 
 use Closure;
 use libgame\event\GameEvent;
+use libgame\game\GameState;
 use libgame\game\round\RoundState;
 use libgame\handler\EventHandler;
 use paintball\entity\FlagEntity;
 use paintball\event\PlayerDeathEvent;
+use paintball\game\custom\CustomPaintballGame;
 use paintball\game\PaintballGame;
+use paintball\utils\Icons;
 use pocketmine\event\entity\EntityDamageByChildEntityEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\Event;
 use pocketmine\event\player\PlayerChatEvent;
+use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerEvent;
+use pocketmine\event\player\PlayerItemUseEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
-use pocketmine\world\sound\NoteInstrument;
-use pocketmine\world\sound\NoteSound;
+use pocketmine\world\sound\ExplodeSound;
+use pocketmine\world\sound\XpLevelUpSound;
 
 class PaintballEventHandler extends EventHandler {
 
@@ -55,9 +60,25 @@ class PaintballEventHandler extends EventHandler {
 		$this->game->handleQuit($player);
 	}
 
+	public function handleDropItem(PlayerDropItemEvent $event): void {
+		$event->cancel();
+	}
+
+	public function handleItemUse(PlayerItemUseEvent $event): void {
+		$player = $event->getPlayer();
+		if($this->game instanceof CustomPaintballGame) {
+			$menu = $this->game->getLeader() === $player ? $this->game->getLeaderHotbarMenu() : $this->game->getPlayerHotbarMenu();
+			$menu->checkAndCallItem($event);
+		}
+	}
+
 	public function handleEntityDamage(EntityDamageEvent $event): void {
 		$entity = $event->getEntity();
 		if($entity instanceof Player) {
+			if($this->game->getState()->equals(GameState::WAITING())) {
+				$event->cancel();
+				return;
+			}
 			$team = $this->game->getTeamManager()->getTeam($entity);
 			if($team === null) {
 				return;
@@ -69,13 +90,20 @@ class PaintballEventHandler extends EventHandler {
 
 			$damager = $event->getDamager();
 			assert($damager instanceof Player);
-			$this->game->getArena()->getWorld()->addSound($damager->getPosition(), new NoteSound(NoteInstrument::PIANO(), 255), [$damager]);
+			if($this->game->getTeamManager()->checkOnTeams($entity, $damager)) {
+				$event->cancel();
+				return;
+			}
+
+			$distance = $damager->getPosition()->distance($entity->getPosition());
+			$this->game->getArena()->getWorld()->addSound($damager->getPosition(), new XpLevelUpSound((int) floor($distance)), [$damager]);
 
 			$event->cancel();
+			$entity->setLastDamageCause($event);
+
 			$deathEvent = new PlayerDeathEvent($entity);
 			$deathEvent->call();
-
-			$this->game->kill($entity);
+			$this->game->broadcastMessage(TextFormat::RED . "Death > " . $deathEvent->getDeathMessage(), false);
 		} elseif($entity instanceof FlagEntity && $event instanceof EntityDamageByEntityEvent) {
 			$event->cancel();
 			if($event instanceof EntityDamageByChildEntityEvent) {
@@ -87,10 +115,23 @@ class PaintballEventHandler extends EventHandler {
 			if($this->game->getTeamManager()->getTeam($damager) !== $team && $this->game->getRoundManager()->getState()->equals(RoundState::IN_ROUND())) {
 				$team->executeOnPlayers(Closure::fromCallable([$this->game, "kill"]));
 				$this->game->broadcastMessage(TextFormat::YELLOW  . "{$damager->getName()} has destroyed $team's flag!");
+				$this->game->broadcastSound(new ExplodeSound());
 				$entity->close();
 			}
 		}
+	}
 
+	public function handlePlayerDeath(PlayerDeathEvent $event): void {
+		$cause = $event->getDamageCause();
+		/** @var Player $damager */
+		if($cause instanceof EntityDamageByChildEntityEvent && ($damager = $cause->getDamager()) instanceof Player) {
+			$damager->sendTip(TextFormat::GREEN . "Eliminated {$event->getPlayer()->getName()}");
+			$event->getPlayer()->sendTip(TextFormat::YELLOW . "Eliminated by {$damager->getName()}");
+			$event->setDeathMessage(TextFormat::YELLOW . $damager->getName() . " " . Icons::DEATH . TextFormat::RESET . " " .TextFormat::YELLOW . $event->getPlayer()->getName());
+		} else {
+			$event->setDeathMessage(Icons::DEATH . TextFormat::RESET . TextFormat::YELLOW . $event->getPlayer()->getName());
+		}
+		$this->game->kill($event->getPlayer());
 	}
 
 	/**

@@ -41,7 +41,7 @@ class InGameStateHandler extends GameStateHandler {
 				0 => "------------------",
 				1 => TextFormat::WHITE . "Round: " . TextFormat::YELLOW . $round->getNumber() . TextFormat::WHITE . " | " . TextFormat::WHITE . "Time: " . TextFormat::YELLOW . $round->formatTime(),
 				2 => "",
-				3 => TextFormat::WHITE . "Team 1: " . TextFormat::YELLOW . $firstScore . TextFormat::WHITE . " | " . TextFormat::WHITE . "Team 2: " . TextFormat::YELLOW . $secondScore,
+				3 => TextFormat::WHITE . "{$game->getFirstTeam()}: " . TextFormat::YELLOW . $firstScore . TextFormat::WHITE . " | " . TextFormat::WHITE . "{$game->getSecondTeam()}: " . TextFormat::YELLOW . $secondScore,
 				4 => "------------------",
 				5 => TextFormat::YELLOW . "valiantnetwork.xyz",
 			]);

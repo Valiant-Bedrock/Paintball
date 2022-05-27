@@ -14,6 +14,9 @@ declare(strict_types=1);
 namespace paintball\arena;
 
 use libforms\buttons\Button;
+use libforms\CustomForm;
+use libforms\elements\Input;
+use libforms\elements\Label;
 use libforms\ModalForm;
 use paintball\PaintballBase;
 use pocketmine\event\block\BlockBreakEvent;
@@ -28,6 +31,7 @@ class PaintballArenaCreator implements Listener {
 
 	protected PaintballArenaCreatorState $state;
 
+	protected string $name;
 	protected World $world;
 	protected Vector3 $firstSpawnpoint;
 	protected Vector3 $secondSpawnpoint;
@@ -59,7 +63,23 @@ class PaintballArenaCreator implements Listener {
 			case PaintballArenaCreatorState::SECOND_SPAWNPOINT()->id():
 				$this->getCreator()->sendMessage(TextFormat::GREEN . "Please click the second spawnpoint.");
 				break;
-			default:
+			case PaintballArenaCreatorState::SET_NAME()->id():
+				$form = new CustomForm(
+					title: "Set Arena Name",
+					elements: [
+						new Label(text: "Please enter the name of the arena."),
+						new Input(
+							text: "Arena Name",
+							placeholder: "Arena Name",
+							default: $this->world->getFolderName(),
+							callable: function(string $value): void {
+								$this->name = $value ?: $this->world->getDisplayName();
+								$this->finish();
+							}
+						)
+					]
+				);
+				$form->send($this->getCreator());
 				break;
 		}
 	}
@@ -103,6 +123,7 @@ class PaintballArenaCreator implements Listener {
 
 	public function finish(): void {
 		$this->plugin->getArenaManager()->add(PaintballArena::create(new PaintballArenaData(
+			name: $this->name,
 			world: $this->world,
 			firstSpawnpoint: $this->firstSpawnpoint,
 			secondSpawnpoint: $this->secondSpawnpoint

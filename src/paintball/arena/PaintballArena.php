@@ -19,12 +19,13 @@ use pocketmine\world\World;
 
 class PaintballArena extends Arena {
 
-	public function __construct(World $world, protected Vector3 $firstSpawnpoint, protected Vector3 $secondSpawnpoint, protected bool $generated = false) {
+	public function __construct(protected string $name, World $world, protected Vector3 $firstSpawnpoint, protected Vector3 $secondSpawnpoint, protected bool $generated = false) {
 		parent::__construct($world);
 	}
 
 	public static function create(PaintballArenaData $data): PaintballArena {
 		return new PaintballArena(
+			name: $data->getName(),
 			world: $data->getWorld(),
 			firstSpawnpoint: $data->getFirstSpawnpoint(),
 			secondSpawnpoint: $data->getSecondSpawnpoint()
@@ -33,6 +34,10 @@ class PaintballArena extends Arena {
 
 	public function isGenerated(): bool {
 		return $this->generated;
+	}
+
+	public function getName(): string {
+		return $this->name;
 	}
 
 	public function getFirstSpawnpoint(): Vector3 {

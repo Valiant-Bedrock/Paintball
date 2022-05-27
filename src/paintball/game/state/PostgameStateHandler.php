@@ -15,11 +15,7 @@ namespace paintball\game\state;
 
 use libgame\event\GameWinEvent;
 use libgame\game\GameStateHandler;
-use libgame\team\Team;
-use paintball\arena\PaintballArena;
 use paintball\game\PaintballGame;
-use paintball\PaintballBase;
-use paintball\utils\ArenaUtils;
 use pocketmine\player\GameMode;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;

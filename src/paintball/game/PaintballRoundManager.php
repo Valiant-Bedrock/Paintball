@@ -35,6 +35,15 @@ class PaintballRoundManager extends RoundManager {
 		return 60 * 5;
 	}
 
+	public function getGameWinner(): ?Team {
+		foreach($this->getGame()->getTeamManager()->getAll() as $team) {
+			if($this->hasTeamWon($team)) {
+				return $team;
+			}
+		}
+		return null;
+	}
+
 	public function hasTeamWon(Team $team): bool {
 		return $this->getScore($team) > (int) floor($this->getRoundCount() / 2);
 	}

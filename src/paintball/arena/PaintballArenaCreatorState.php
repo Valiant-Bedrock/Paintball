@@ -18,6 +18,7 @@ use pocketmine\utils\EnumTrait;
 /**
  * @method static PaintballArenaCreatorState FIRST_SPAWNPOINT()
  * @method static PaintballArenaCreatorState SECOND_SPAWNPOINT()
+ * @method static PaintballArenaCreatorState SET_NAME()
  */
 class PaintballArenaCreatorState {
 	use EnumTrait;
@@ -25,6 +26,7 @@ class PaintballArenaCreatorState {
 	protected static function setup(): void {
 		self::register(new PaintballArenaCreatorState("first_spawnpoint"));
 		self::register(new PaintballArenaCreatorState("second_spawnpoint"));
+		self::register(new PaintballArenaCreatorState("set_name"));
 	}
 
 }

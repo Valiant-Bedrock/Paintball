@@ -25,11 +25,13 @@ class PaintballArenaData {
 
 	/**
 	 * For some reason, PHPStan has issues with attributes as well as implemented generics..?
+	 * @param string $name
 	 * @param World $world
 	 * @param Vector3 $firstSpawnpoint
 	 * @param Vector3 $secondSpawnpoint
 	 */
 	public function __construct(
+		#[Field] protected string $name,
 		/** @phpstan-ignore-next-line */
 		#[Field(parser: WorldParser::class)] protected World $world,
 		/** @phpstan-ignore-next-line */
@@ -37,6 +39,10 @@ class PaintballArenaData {
 		/** @phpstan-ignore-next-line */
 		#[Field(name: "second-spawnpoint", parser: Vector3Parser::class)] protected Vector3 $secondSpawnpoint,
 	) {
+	}
+
+	public function getName(): string {
+		return $this->name;
 	}
 
 	public function getWorld(): World {
