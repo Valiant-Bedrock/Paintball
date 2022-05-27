@@ -58,12 +58,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:Valiant-Bedrock/libforms.git",
-                "reference": "809bd084bb1a3bee30cb811ad1a04a7fad58a720"
+                "reference": "64ccfd8b640d088a160667284c64f26c357db334"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Valiant-Bedrock/libforms/zipball/809bd084bb1a3bee30cb811ad1a04a7fad58a720",
-                "reference": "809bd084bb1a3bee30cb811ad1a04a7fad58a720",
+                "url": "https://api.github.com/repos/Valiant-Bedrock/libforms/zipball/64ccfd8b640d088a160667284c64f26c357db334",
+                "reference": "64ccfd8b640d088a160667284c64f26c357db334",
                 "shasum": ""
             },
             "require-dev": {
@@ -97,7 +97,7 @@
                 "source": "https://github.com/Valiant-Bedrock/libforms/tree/master",
                 "issues": "https://github.com/Valiant-Bedrock/libforms/issues"
             },
-            "time": "2022-05-26T11:20:49+00:00"
+            "time": "2022-05-27T06:22:53+00:00"
         },
         {
             "name": "valiant-bedrock/libgame",
@@ -105,12 +105,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:Valiant-Bedrock/libgame.git",
-                "reference": "0b5739c30a725cbd9ec702b327cd3ed76b8582be"
+                "reference": "123ee6be46460b0643535ef1e6e3d668fc8650f4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/0b5739c30a725cbd9ec702b327cd3ed76b8582be",
-                "reference": "0b5739c30a725cbd9ec702b327cd3ed76b8582be",
+                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/123ee6be46460b0643535ef1e6e3d668fc8650f4",
+                "reference": "123ee6be46460b0643535ef1e6e3d668fc8650f4",
                 "shasum": ""
             },
             "require": {
@@ -147,7 +147,7 @@
                 "source": "https://github.com/Valiant-Bedrock/libgame/tree/master",
                 "issues": "https://github.com/Valiant-Bedrock/libgame/issues"
             },
-            "time": "2022-05-26T22:40:28+00:00"
+            "time": "2022-05-27T06:13:05+00:00"
         },
         {
             "name": "valiant-bedrock/libscoreboard",

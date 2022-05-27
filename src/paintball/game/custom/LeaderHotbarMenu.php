@@ -97,9 +97,9 @@ class LeaderHotbarMenu extends HotbarMenu {
 									callback: fn(TeamMode $teamMode) => $teamMode->getFormattedName(),
 									array: array_values(TeamMode::getAll())
 								),
-								default: array_search($game->getTeamMode(), array_values(TeamMode::getAll())) ?? 0,
+								default: array_search($game->getTeamMode(), array_values(TeamMode::getAll())) ?: 0,
 								callable: function (string $formattedName) use($game): void {
-									$newMode = TeamMode::fromString($formattedName) ?? throw new AssumptionFailedError("Invalid team mode key");
+									$newMode = TeamMode::fromString($formattedName);
 									$game->setTeamMode($newMode);
 								}
 							),
@@ -115,8 +115,8 @@ class LeaderHotbarMenu extends HotbarMenu {
 								maximum: 25,
 								step: 1,
 								default: $roundManager->getRoundCount(),
-								callable: function(int $value) use($roundManager): void {
-									$roundManager->setRoundCount($value);
+								callable: function(float|int $value) use($roundManager): void {
+									$roundManager->setRoundCount((int) $value);
 								}
 							),
 						],
@@ -155,7 +155,7 @@ class LeaderHotbarMenu extends HotbarMenu {
 	 * Given a game, this function will create a menu for the leader
 	 *
 	 * @param CustomPaintballGame $game
-	 * @return static
+	 * @return self
 	 */
 	public static function fromGame(CustomPaintballGame $game): self {
 		return new LeaderHotbarMenu($game);

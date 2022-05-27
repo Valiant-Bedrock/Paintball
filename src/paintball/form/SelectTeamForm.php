@@ -63,6 +63,11 @@ class SelectTeamForm extends SimpleForm {
 						$current = $game->getTeamManager()->getTeam($player);
 						if ($current !== null) {
 							$current->removeMember($player);
+
+							// Reset name tags back to default
+							$player->setNameTagAlwaysVisible();
+							$player->setNameTag($player->getName());
+
 							$current->broadcastMessage(TextFormat::YELLOW . $player->getName() . TextFormat::WHITE . " has left the team.");
 							$game->addUnassociatedPlayer($player);
 						}

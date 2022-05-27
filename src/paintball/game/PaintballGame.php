@@ -207,7 +207,7 @@ class PaintballGame extends RoundBasedGame {
 	public function setupTeam(Team $team): void {
 		$spawnpoint = $this->getTeamSpawnpoint($team);
 		// Setup players
-		$team->executeOnPlayers(function(Player $player) use($spawnpoint, $team): void {
+		$team->executeOnPlayers(function(Player $player) use($spawnpoint): void {
 			// Ensure player is alive
 			$this->getTeamManager()->setPlayerState($player, MemberState::ALIVE());
 			$player->setMaxHealth(PaintballGame::MAX_HEALTH);

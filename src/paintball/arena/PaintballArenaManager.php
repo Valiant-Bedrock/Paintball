@@ -44,6 +44,7 @@ class PaintballArenaManager extends ArenaManager {
 		/** @var PaintballArena $arena */
 		foreach ($this->arenas as $arena) {
 			$data[] = (new PaintballArenaData(
+				name: $arena->getName(),
 				world: $arena->getWorld(),
 				firstSpawnpoint: $arena->getFirstSpawnpoint(),
 				secondSpawnpoint: $arena->getSecondSpawnpoint()

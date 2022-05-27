@@ -21,6 +21,7 @@ use libforms\elements\Label;
 use libforms\SimpleForm;
 use libgame\arena\Arena;
 use libgame\arena\ArenaManager;
+use libgame\game\Game;
 use libgame\game\GameState;
 use libgame\GameBase;
 use libgame\menu\HotbarMenu;
@@ -285,7 +286,7 @@ class PaintballBase extends GameBase {
 					/** @var array<PaintballGame> $games */
 					$games = array_values(array_filter(
 						array: $this->getGameManager()->getAll(),
-						callback: fn(PaintballGame $game): bool => !$game instanceof CustomPaintballGame
+						callback: fn(Game $game) => !$game instanceof CustomPaintballGame
 					));
 					$form = new SimpleForm(
 						title: "Game Selector",
@@ -309,6 +310,7 @@ class PaintballBase extends GameBase {
 						$player->sendMessage(TextFormat::RED . "You do not have permission to create games.");
 						return;
 					}
+					/** @var PaintballArena|null $arena */
 					$arena = $this->getArenaManager()->findOpenArena();
 					if($arena !== null) {
 						$this->getArenaManager()->setOccupied($arena, true);
@@ -339,24 +341,29 @@ class PaintballBase extends GameBase {
 						title: "Join Custom Game",
 						elements: [
 							new Label(text: TextFormat::YELLOW . "Enter the creator's name of the game you want to join."),
-							new Input(text: "Leader Name", placeholder: "Leader Name", default: "", callable: function(string $name) use($player): void {
-								if($name === "") {
-									$player->sendMessage(TextFormat::RED . "Name field can't be empty!");
-									return;
+							new Input(
+								text: "Leader Name",
+								placeholder: "Leader Name",
+								default: "",
+								callable: function(string $name) use($player): void {
+									if($name === "") {
+										$player->sendMessage(TextFormat::RED . "Name field can't be empty!");
+										return;
+									}
+									$creator = $this->getServer()->getPlayerByPrefix($name);
+									if(!$creator instanceof Player) {
+										$player->sendMessage(TextFormat::RED . "Unable to locate player with the name '$name'.");
+										return;
+									}
+									$game = $this->getGameManager()->getGameByPlayer($creator);
+									if(!$game instanceof CustomPaintballGame) {
+										$player->sendMessage(TextFormat::RED . "{$creator->getName()} is not in a custom game.");
+										return;
+									}
+									$player->sendMessage(TextFormat::YELLOW . "Successfully found custom game! Joining...");
+									$game->handleJoin($player);
 								}
-								$creator = $this->getServer()->getPlayerByPrefix($name);
-								if(!$creator instanceof Player) {
-									$player->sendMessage(TextFormat::RED . "Unable to locate player with the name '$name'.");
-									return;
-								}
-								$game = $this->getGameManager()->getGameByPlayer($creator);
-								if(!$game instanceof CustomPaintballGame) {
-									$player->sendMessage(TextFormat::RED . "{$creator->getName()} is not in a custom game.");
-									return;
-								}
-								$player->sendMessage(TextFormat::YELLOW . "Successfully found custom game! Joining...");
-								$game->handleJoin($player);
-							})
+							)
 						],
 					);
 					$form->send($player);

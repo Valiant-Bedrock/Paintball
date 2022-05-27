@@ -16,6 +16,7 @@ namespace paintball;
 use pocketmine\permission\DefaultPermissionNames;
 use pocketmine\permission\Permission;
 use pocketmine\permission\PermissionManager;
+use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\EnumTrait;
 
 /**
@@ -23,8 +24,8 @@ use pocketmine\utils\EnumTrait;
  */
 class PaintballPermissions {
 	use EnumTrait {
-		__construct as private Enum__construct;
-		register as private Enum_register;
+		EnumTrait::__construct as private Enum__construct;
+		EnumTrait::register as private Enum_register;
 	}
 
 	/**
@@ -44,7 +45,8 @@ class PaintballPermissions {
 		));
 
 		if($addToOperatorGroup) {
-			PermissionManager::getInstance()->getPermission(DefaultPermissionNames::GROUP_OPERATOR)->addChild($member->permissionName(), true);
+			$group = PermissionManager::getInstance()->getPermission(DefaultPermissionNames::GROUP_OPERATOR) ?? throw new AssumptionFailedError("Operator group does not exist");
+			$group->addChild($member->permissionName(), true);
 		}
 	}
 

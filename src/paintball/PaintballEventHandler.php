@@ -123,7 +123,6 @@ class PaintballEventHandler extends EventHandler {
 
 	public function handlePlayerDeath(PlayerDeathEvent $event): void {
 		$cause = $event->getDamageCause();
-		/** @var Player $damager */
 		if($cause instanceof EntityDamageByChildEntityEvent && ($damager = $cause->getDamager()) instanceof Player) {
 			$damager->sendTip(TextFormat::GREEN . "Eliminated {$event->getPlayer()->getName()}");
 			$event->getPlayer()->sendTip(TextFormat::YELLOW . "Eliminated by {$damager->getName()}");

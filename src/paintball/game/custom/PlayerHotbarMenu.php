@@ -60,7 +60,7 @@ class PlayerHotbarMenu extends HotbarMenu {
 	 * Given a game, this function will create a menu for the leader
 	 *
 	 * @param PaintballGame $game
-	 * @return static
+	 * @return self
 	 */
 	public static function fromGame(PaintballGame $game): self {
 		return new PlayerHotbarMenu($game);
