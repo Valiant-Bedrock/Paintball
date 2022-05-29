@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace paintball\command;
 
 use libcommand\Overload;
+use libcommand\parameter\Parameter;
 use libcommand\parameter\types\StringParameter;
 use libcommand\PlayerCommand;
 use libgame\GameBase;
@@ -33,6 +34,7 @@ class CreateArenaCommand extends PlayerCommand {
 		parent::__construct("create-arena", "Creates a paintball arena", "/create-arena [world]");
 		$this->registerOverload(new Overload(
 			name: "default",
+			/** @phpstan-ignore-next-line - I do not know how to deal with PHPStan yelling about the array not being correct */
 			parameters: [new StringParameter(name: "world", optional: true)]
 		));
 		$this->setPermission((string) PaintballPermissions::CREATE_ARENA());
@@ -41,7 +43,7 @@ class CreateArenaCommand extends PlayerCommand {
 
 	public function onExecute(CommandSender $sender, array $arguments): bool|string {
 		assert($sender instanceof Player);
-		$worldName = $args["world"] ?? $sender->getWorld()->getFolderName();
+		$worldName = $arguments["world"] ?? $sender->getWorld()->getFolderName();
 		$loaded = $sender->getServer()->getWorldManager()->loadWorld($worldName);
 		if(!$loaded) {
 			return TextFormat::RED . "Unable to locate world: '$worldName'";

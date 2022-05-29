@@ -29,6 +29,7 @@ class InviteCommand extends PlayerCommand {
 
 	public function __construct(GameBase $plugin) {
 		parent::__construct("invite", "Invite a player to your paintball game", "/invite <player>");
+		/** @phpstan-ignore-next-line - I do not know how to deal with PHPStan yelling about the array not being correct */
 		$this->registerOverload(new Overload("default", [new TargetParameter("player", false)]));
 		$this->setPlugin($plugin);
 	}

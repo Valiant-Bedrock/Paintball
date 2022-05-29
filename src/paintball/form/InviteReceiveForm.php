@@ -30,7 +30,7 @@ class InviteReceiveForm extends ModalForm {
 				$player->sendMessage(TextFormat::GREEN . "You have accepted the invite.");
 				$game->handleJoin($player);
 			}),
-			secondaryButton: new Button(TextFormat::RED . "Decline", function (Player $player) use($game, $inviter): void {
+			secondaryButton: new Button(TextFormat::RED . "Decline", function (Player $player) use($inviter): void {
 				$inviter->sendMessage(TextFormat::RED . "{$player->getName()} has declined your invite.");
 				$player->sendMessage(TextFormat::RED . "You have declined the invite.");
 			})
