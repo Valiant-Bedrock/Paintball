@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "22498657e23166b95d788801310c8863",
+    "content-hash": "ff89d0edd0d1e49d8311198e04029a06",
     "packages": [
         {
             "name": "sylvrs/libmarshal",
@@ -51,6 +51,55 @@
                 "source": "https://github.com/sylvrs/libMarshal/tree/1.4.3"
             },
             "time": "2022-04-29T20:07:30+00:00"
+        },
+        {
+            "name": "valiant-bedrock/libcommand",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "git@github.com:Valiant-Bedrock/libcommand.git",
+                "reference": "cdcc46cde1ab1b73ea4f1b996eac0196f870831b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Valiant-Bedrock/libcommand/zipball/cdcc46cde1ab1b73ea4f1b996eac0196f870831b",
+                "reference": "cdcc46cde1ab1b73ea4f1b996eac0196f870831b",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.0"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "1.6.x-dev",
+                "pocketmine/pocketmine-mp": "dev-stable"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "libcommand\\": "src/libcommand"
+                }
+            },
+            "scripts": {
+                "analyze": [
+                    "./vendor/bin/phpstan analyze"
+                ]
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "sylvrs",
+                    "email": "personal@matthewjordan.xyz"
+                }
+            ],
+            "description": "A PocketMine-MP library for registering commands with proper overloads",
+            "support": {
+                "source": "https://github.com/Valiant-Bedrock/libcommand/tree/master",
+                "issues": "https://github.com/Valiant-Bedrock/libcommand/issues"
+            },
+            "time": "2022-05-29T19:10:55+00:00"
         },
         {
             "name": "valiant-bedrock/libforms",
@@ -1597,6 +1646,7 @@
     "stability-flags": {
         "valiant-bedrock/libgame": 20,
         "valiant-bedrock/libforms": 20,
+        "valiant-bedrock/libcommand": 20,
         "phpstan/phpstan": 20,
         "pocketmine/pocketmine-mp": 20
     },

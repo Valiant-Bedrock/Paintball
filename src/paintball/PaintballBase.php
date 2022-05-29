@@ -30,18 +30,15 @@ use libgame\team\TeamMode;
 use libgame\utilities\DeployableClosure;
 use libscoreboard\Scoreboard;
 use paintball\arena\PaintballArena;
-use paintball\arena\PaintballArenaCreator;
 use paintball\arena\PaintballArenaManager;
-use paintball\entity\FlagEntity;
-use paintball\form\CustomSettingsForm;
+use paintball\command\CreateArenaCommand;
+use paintball\command\InviteCommand;
+use paintball\command\SettingsCommand;
 use paintball\game\custom\CustomPaintballGame;
 use paintball\game\PaintballGame;
 use paintball\item\PaintballKits;
 use paintball\utils\ArenaUtils;
-use paintball\utils\Column;
 use paintball\utils\Icons;
-use pocketmine\command\Command;
-use pocketmine\command\CommandSender;
 use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
@@ -87,6 +84,15 @@ class PaintballBase extends GameBase {
 		$this->lobbyEventHandler = new PaintballLobbyEventHandler($this);
 		$this->lobbyEventHandler->register($this);
 
+		$this->getServer()->getCommandMap()->registerAll(
+			fallbackPrefix: $this->getName(),
+			commands: [
+				new CreateArenaCommand($this),
+				new InviteCommand($this),
+				new SettingsCommand($this)
+			]
+		);
+
 		$this->getServer()->getPluginManager()->registerEvents(listener: new PaintballListener($this), plugin: $this);
 	}
 
@@ -104,44 +110,6 @@ class PaintballBase extends GameBase {
 
 	public static function getInstance(): PaintballBase {
 		return self::$instance;
-	}
-
-	public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
-		switch(strtolower($label)) {
-			case "createarena":
-				if(!$sender instanceof Player) {
-					$sender->sendMessage("You must be a player to use this command.");
-					return true;
-				}
-				$worldName = $args[0] ?? $sender->getWorld()->getFolderName();
-				$this->getServer()->getWorldManager()->loadWorld($worldName);
-				$world = $this->getServer()->getWorldManager()->getWorldByName($worldName) ?? throw new AssumptionFailedError("World $worldName does not exist.");
-				$sender->teleport($world->getSpawnLocation());
-				$creator = new PaintballArenaCreator(creator: $sender, plugin: $this);
-				$creator->start();
-				return true;
-			case "setspeed":
-				FlagEntity::$YAW_TURN_SPEED = intval($args[0] ?? FlagEntity::$YAW_TURN_SPEED);
-				break;
-			case "settings":
-				if(!$sender instanceof Player) {
-					$sender->sendMessage("You must be a player to use this command.");
-					return true;
-				}
-				$game = $this->getGameManager()->getGameByPlayer($sender);
-				if(!$game instanceof CustomPaintballGame) {
-					$sender->sendMessage(TextFormat::RED . "You must be in a custom game to use this command.");
-					return true;
-				}
-				if($game->getLeader() !== $sender) {
-					$sender->sendMessage(TextFormat::RED . "You must be the leader to use this command.");
-					return true;
-				}
-				$form = new CustomSettingsForm($game);
-				$form->send($sender);
-				break;
-		}
-		return true;
 	}
 
 	/**
@@ -361,41 +329,6 @@ class PaintballBase extends GameBase {
 						);
 					}
 
-				}
-			),
-			2 => new MenuEntry(
-				item: VanillaItems::NETHER_STAR()->setCustomName(TextFormat::YELLOW . "Join Custom Game"),
-				closure: function(Player $player): void {
-					$form = new CustomForm(
-						title: "Join Custom Game",
-						elements: [
-							new Label(text: TextFormat::YELLOW . "Enter the creator's name of the game you want to join."),
-							new Input(
-								text: "Leader Name",
-								placeholder: "Leader Name",
-								default: "",
-								callable: function(string $name) use($player): void {
-									if($name === "") {
-										$player->sendMessage(TextFormat::RED . "Name field can't be empty!");
-										return;
-									}
-									$creator = $this->getServer()->getPlayerByPrefix($name);
-									if(!$creator instanceof Player) {
-										$player->sendMessage(TextFormat::RED . "Unable to locate player with the name '$name'.");
-										return;
-									}
-									$game = $this->getGameManager()->getGameByPlayer($creator);
-									if(!$game instanceof CustomPaintballGame) {
-										$player->sendMessage(TextFormat::RED . "{$creator->getName()} is not in a custom game.");
-										return;
-									}
-									$player->sendMessage(TextFormat::YELLOW . "Successfully found custom game! Joining...");
-									$game->handleJoin($player);
-								}
-							)
-						],
-					);
-					$form->send($player);
 				}
 			)
 		]);

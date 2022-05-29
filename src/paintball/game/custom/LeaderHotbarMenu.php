@@ -26,6 +26,7 @@ use libgame\menu\MenuEntry;
 use libgame\team\TeamMode;
 use libgame\utilities\Utilities;
 use paintball\form\GameSettingsForm;
+use paintball\form\LobbySettingsForm;
 use paintball\form\SelectTeamForm;
 use pocketmine\block\utils\DyeColor;
 use pocketmine\block\VanillaBlocks;
@@ -70,6 +71,13 @@ class LeaderHotbarMenu extends HotbarMenu {
 						return;
 					}
 					$form = new SelectTeamForm($game);
+					$form->send($player);
+				}
+			),
+			6 => new MenuEntry(
+				item: VanillaItems::TOTEM()->setCustomName(TextFormat::YELLOW . "Lobby Settings"),
+				closure: function(Player $player) use($game,): void {
+					$form = new LobbySettingsForm($game);
 					$form->send($player);
 				}
 			),
