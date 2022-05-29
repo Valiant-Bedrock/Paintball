@@ -14,7 +14,6 @@ declare(strict_types=1);
 namespace paintball\command;
 
 use libcommand\Overload;
-use libcommand\parameter\Parameter;
 use libcommand\parameter\types\StringParameter;
 use libcommand\PlayerCommand;
 use libgame\GameBase;
@@ -43,6 +42,7 @@ class CreateArenaCommand extends PlayerCommand {
 
 	public function onExecute(CommandSender $sender, array $arguments): bool|string {
 		assert($sender instanceof Player);
+		/** @var string $worldName */
 		$worldName = $arguments["world"] ?? $sender->getWorld()->getFolderName();
 		$loaded = $sender->getServer()->getWorldManager()->loadWorld($worldName);
 		if(!$loaded) {
