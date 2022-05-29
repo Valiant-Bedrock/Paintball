@@ -29,6 +29,7 @@ class PaintballListener implements Listener {
 
 	public function handleJoin(PlayerJoinEvent $event): void {
 		$event->setJoinMessage("");
+		$event->getPlayer()->getHungerManager()->setEnabled(false);
 	}
 
 	public function handleQuit(PlayerQuitEvent $event): void {

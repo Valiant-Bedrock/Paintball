@@ -15,6 +15,11 @@ namespace paintball\utils;
 
 class Icons {
 
+	// Glyph_E0
+	public const SCOREBOARD_OUTLINE = "\u{E200}";
+	public const GAME_SCOREBOARD_OUTLINE = "\u{E201}";
+
+	// Glyph_E1
 	public const DEATH = "\u{E1FF}";
 
 }

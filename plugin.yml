@@ -1,7 +1,7 @@
 name: Paintball
 description: "A paintball gamemode made for Minecraft: Bedrock Edition"
 author: sylvrs
-version: 0.7.0
+version: 0.8.0
 api: [4.0.0]
 main: paintball\PaintballBase
 commands:
@@ -28,4 +28,8 @@ commands:
   settings:
     description: "Shows a custom game settings menu to the leader"
     usage: /settings
+    permission: pocketmine.group.operator
+  setscale:
+    description: "Sets the flag scale"
+    usage: /setscale <scale>
     permission: pocketmine.group.operator

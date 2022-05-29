@@ -16,6 +16,8 @@ namespace paintball\game\state;
 use libgame\event\GameWinEvent;
 use libgame\game\GameStateHandler;
 use paintball\game\PaintballGame;
+use paintball\PaintballBase;
+use paintball\utils\Icons;
 use pocketmine\player\GameMode;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
@@ -70,16 +72,12 @@ class PostgameStateHandler extends GameStateHandler {
 		$game = $this->getGame();
 		$game->executeOnAll(function (Player $player) use($currentStateTime, $game): void {
 			$scoreboard = $game->getScoreboardManager()->get($player);
-			$scoreboard->setLines([
-				0 => "------------------",
-				1 => TextFormat::GREEN . "Game ending in " . (self::DURATION - $currentStateTime) . "...",
-				2 => "------------------",
-				3 => TextFormat::YELLOW . "valiantnetwork.xyz",
-			]);
+			$scoreboard->setLines(PaintballBase::formatScoreboard([
+				TextFormat::GREEN . "Game ending in " . (self::DURATION - $currentStateTime) . "..."
+			]));
 		});
-		if($currentStateTime >= self::DURATION) {
+		if ($currentStateTime >= self::DURATION) {
 			$game->finish();
-			// Delete game
 		}
 	}
 

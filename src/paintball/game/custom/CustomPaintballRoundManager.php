@@ -20,10 +20,7 @@ class CustomPaintballRoundManager extends PaintballRoundManager {
 
 	public const DEFAULT_ROUND_COUNT = 10;
 
-	public function __construct(
-		RoundBasedGame $game,
-		protected int $roundCount = self::DEFAULT_ROUND_COUNT
-	) {
+	public function __construct(RoundBasedGame $game, protected int $roundCount = self::DEFAULT_ROUND_COUNT) {
 		parent::__construct($game);
 	}
 

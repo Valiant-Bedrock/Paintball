@@ -75,7 +75,7 @@ class PaintballEventHandler extends EventHandler {
 	public function handleEntityDamage(EntityDamageEvent $event): void {
 		$entity = $event->getEntity();
 		if($entity instanceof Player) {
-			if($this->game->getState()->equals(GameState::WAITING())) {
+			if(!$this->game->getState()->equals(GameState::IN_GAME()) || !$this->game->getRoundManager()->getState()->equals(RoundState::IN_ROUND())) {
 				$event->cancel();
 				return;
 			}
@@ -103,7 +103,6 @@ class PaintballEventHandler extends EventHandler {
 
 			$deathEvent = new PlayerDeathEvent($entity);
 			$deathEvent->call();
-			$this->game->broadcastMessage(TextFormat::RED . "Death > " . $deathEvent->getDeathMessage(), false);
 		} elseif($entity instanceof FlagEntity && $event instanceof EntityDamageByEntityEvent) {
 			$event->cancel();
 			if($event instanceof EntityDamageByChildEntityEvent) {
@@ -123,13 +122,16 @@ class PaintballEventHandler extends EventHandler {
 
 	public function handlePlayerDeath(PlayerDeathEvent $event): void {
 		$cause = $event->getDamageCause();
-		if($cause instanceof EntityDamageByChildEntityEvent && ($damager = $cause->getDamager()) instanceof Player) {
+		$damager = $cause instanceof EntityDamageByChildEntityEvent ? $cause->getDamager() : null;
+		if($damager instanceof Player) {
+			/** @var Player $damager */
 			$damager->sendTip(TextFormat::GREEN . "Eliminated {$event->getPlayer()->getName()}");
 			$event->getPlayer()->sendTip(TextFormat::YELLOW . "Eliminated by {$damager->getName()}");
-			$event->setDeathMessage(TextFormat::YELLOW . $damager->getName() . " " . Icons::DEATH . TextFormat::RESET . " " .TextFormat::YELLOW . $event->getPlayer()->getName());
-		} else {
-			$event->setDeathMessage(Icons::DEATH . TextFormat::RESET . TextFormat::YELLOW . $event->getPlayer()->getName());
 		}
+		$this->game->broadcastKillFeed(
+			victim: $event->getPlayer(),
+			killer: $damager instanceof Player ? $damager : null
+		);
 		$this->game->kill($event->getPlayer());
 	}
 

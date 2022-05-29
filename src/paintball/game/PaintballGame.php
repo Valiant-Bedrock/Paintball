@@ -34,11 +34,11 @@ use paintball\PaintballEventHandler;
 use paintball\team\PaintballTeam;
 use paintball\team\PaintballTeamManager;
 use paintball\utils\ArenaUtils;
+use paintball\utils\Icons;
 use pocketmine\entity\Location;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\GameRulesChangedPacket;
 use pocketmine\network\mcpe\protocol\types\BoolGameRule;
-use pocketmine\network\mcpe\protocol\types\entity\ByteMetadataProperty;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties;
 use pocketmine\network\mcpe\protocol\types\entity\StringMetadataProperty;
 use pocketmine\player\GameMode;
@@ -49,6 +49,22 @@ use pocketmine\world\Position;
 use pocketmine\world\World;
 
 class PaintballGame extends RoundBasedGame {
+
+	public const POSSIBLE_TEAM_COLORS = [
+		"Dark Blue" => TextFormat::DARK_BLUE,
+		"Dark Green" => TextFormat::DARK_GREEN,
+		"Dark Aqua" => TextFormat::DARK_AQUA,
+		"Dark Purple" => TextFormat::DARK_PURPLE,
+		"Gold" => TextFormat::GOLD,
+		"Blue" => TextFormat::BLUE,
+		"Green" => TextFormat::GREEN,
+		"Aqua" => TextFormat::AQUA,
+		"Red" => TextFormat::RED,
+		"Light Purple" => TextFormat::LIGHT_PURPLE,
+		"Yellow" => TextFormat::YELLOW,
+		"Light Gold" => TextFormat::MINECOIN_GOLD
+	];
+
 
 	public const HEARTBEAT_PERIOD = 20;
 
@@ -196,6 +212,34 @@ class PaintballGame extends RoundBasedGame {
 	public function getSecondTeam(): PaintballTeam {
 		$team = $this->getTeamManager()->get(2) ?? throw new AssumptionFailedError("No team found");
 		return $team instanceof PaintballTeam ? $team : throw new AssumptionFailedError("Team is not an instance of PaintballTeam");
+	}
+
+	public function broadcastActionbarMessage(string $message): void {
+		$this->executeOnAll(function(Player $player) use ($message) {
+			$player->sendActionBarMessage($message);
+		});
+	}
+
+	public function broadcastKillFeed(Player $victim, ?Player $killer): void {
+		$this->executeOnAll(function(Player $player) use ($victim, $killer) {
+			$victimTeam = $this->getTeamManager()->getTeam($victim) ?? throw new AssumptionFailedError("Victim should be in a team");
+			$playerTeam = $this->getTeamManager()->getTeam($player);
+			$victimColor = match(true) {
+				$playerTeam !== null => $playerTeam === $victimTeam ? TextFormat::GREEN : TextFormat::RED,
+				default => TextFormat::YELLOW
+			};
+			if($killer !== null) {
+				$killerTeam = $this->getTeamManager()->getTeam($killer) ?? throw new AssumptionFailedError("Killer should be in a team");
+				$killerColor = match(true) {
+					$playerTeam !== null => $playerTeam === $killerTeam ? TextFormat::GREEN : TextFormat::RED,
+					default => $killerTeam->getColor()
+				};
+				$player->sendActionBarMessage($killerColor . $killer->getName() . " " . Icons::DEATH . TextFormat::RESET . " " .$victimColor . $victim->getName());
+			} else {
+				$player->sendActionBarMessage(Icons::DEATH . TextFormat::RESET . " " .$victimColor . $victim->getName());
+			}
+
+		});
 	}
 
 	/**

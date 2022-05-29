@@ -105,12 +105,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:Valiant-Bedrock/libgame.git",
-                "reference": "123ee6be46460b0643535ef1e6e3d668fc8650f4"
+                "reference": "58f17d529abdc2e49a3f108b74210800c50a92df"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/123ee6be46460b0643535ef1e6e3d668fc8650f4",
-                "reference": "123ee6be46460b0643535ef1e6e3d668fc8650f4",
+                "url": "https://api.github.com/repos/Valiant-Bedrock/libgame/zipball/58f17d529abdc2e49a3f108b74210800c50a92df",
+                "reference": "58f17d529abdc2e49a3f108b74210800c50a92df",
                 "shasum": ""
             },
             "require": {
@@ -147,7 +147,7 @@
                 "source": "https://github.com/Valiant-Bedrock/libgame/tree/master",
                 "issues": "https://github.com/Valiant-Bedrock/libgame/issues"
             },
-            "time": "2022-05-27T06:13:05+00:00"
+            "time": "2022-05-28T05:38:19+00:00"
         },
         {
             "name": "valiant-bedrock/libscoreboard",

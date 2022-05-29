@@ -18,12 +18,10 @@ use libgame\game\GameState;
 use libgame\game\GameStateHandler;
 use libgame\GameBase;
 use libgame\kit\Kit;
-use libgame\team\member\MemberState;
 use libgame\team\Team;
 use libgame\team\TeamMode;
 use paintball\arena\PaintballArena;
 use paintball\game\PaintballGame;
-use paintball\game\PaintballRoundManager;
 use paintball\team\PaintballTeam;
 use paintball\team\PaintballTeamManager;
 use pocketmine\network\mcpe\protocol\GameRulesChangedPacket;
@@ -62,11 +60,9 @@ class CustomPaintballGame extends PaintballGame {
 		$this->leaderHotbarMenu = LeaderHotbarMenu::fromGame($this);
 
 		// Team 1
-		[$id, $color] = $this->getTeamManager()->generateTeamData();
-		$this->getTeamManager()->add(new PaintballTeam(id: $id, color: $color, members: []));
+		$this->getTeamManager()->add(new PaintballTeam(id: 1, color: TextFormat::BLUE, members: []));
 		// Team 2
-		[$id, $color] = $this->getTeamManager()->generateTeamData();
-		$this->getTeamManager()->add(new PaintballTeam(id: $id, color: $color, members: []));
+		$this->getTeamManager()->add(new PaintballTeam(id: 2, color: TextFormat::RED, members: []));
 	}
 
 	public function getLeader(): Player {
@@ -127,6 +123,14 @@ class CustomPaintballGame extends PaintballGame {
 		$hotbarMenu->send($player);
 	}
 
+	public function handleQuit(Player $player): void {
+		if($player === $this->leader) {
+			$this->broadcastMessage(TextFormat::YELLOW . "Deleting custom game lobby due to leader leaving...");
+			$this->finish();
+		}
+		parent::handleQuit($player);
+	}
+
 	public function setNametagData(Player $player, Team $team): void {
 		$player->sendData(
 			targets: $team->getOnlineMembers(),
@@ -164,13 +168,16 @@ class CustomPaintballGame extends PaintballGame {
 	public function finish(): void {
 		$this->setState(GameState::WAITING());
 
-		$this->roundManager = new PaintballRoundManager($this);
+		/** @var CustomPaintballRoundManager $roundManager */
+		$roundManager = $this->getRoundManager();
+		$roundManager->reset();
 
 		$this->executeOnAll(function(Player $player): void {
 			// Reset name tag
 			$player->setNameTag($player->getName());
 			$player->setNameTagVisible();
 
+			$player->setImmobile(false);
 			$player->setGamemode(GameMode::ADVENTURE());
 			// Disable flight
 			$player->setAllowFlight(false);

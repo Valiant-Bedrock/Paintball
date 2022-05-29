@@ -15,6 +15,7 @@ namespace paintball\game\custom;
 
 use paintball\game\PaintballGame;
 use paintball\game\state\WaitingStateHandler;
+use paintball\PaintballBase;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 
@@ -26,12 +27,9 @@ class CustomWaitingStateHandler extends WaitingStateHandler {
 
 		$game->executeOnAll(function (Player $player) use($game): void {
 			$scoreboard = $game->getScoreboardManager()->get($player);
-			$scoreboard->setLines([
-				0 => "------------------",
-				1 => TextFormat::GREEN . "Waiting for players...",
-				2 => "------------------",
-				3 => TextFormat::YELLOW . "valiantnetwork.xyz",
-			]);
+			$scoreboard->setLines(PaintballBase::formatScoreboard([
+				TextFormat::GREEN . "Waiting for players..."
+			]));
 		});
 	}
 }

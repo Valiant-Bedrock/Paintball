@@ -102,7 +102,7 @@ class PaintballRoundManager extends RoundManager {
 
 	public function handleEnding(): void {
 		$winner = $this->getRoundWinner();
-		if($this->current->getNumber() >= $this->getRoundCount()|| ($winner !== null && $this->hasTeamWon($winner))) {
+		if($this->current->getNumber() >= $this->getRoundCount() || ($winner !== null && $this->hasTeamWon($winner))) {
 			$this->getGame()->setState(GameState::POSTGAME());
 			return;
 		}
@@ -122,5 +122,12 @@ class PaintballRoundManager extends RoundManager {
 		$this->setState(RoundState::PREROUND());
 		$this->roundCountdown = self::COUNTDOWN_LENGTH;
 		$this->setCurrentRound(new Round(number: $this->current->getNumber() + 1));
+	}
+
+	public function reset(): void {
+		$this->roundCountdown = self::COUNTDOWN_LENGTH;
+		$this->setCurrentRound(new Round(number: 1));
+		$this->setState(RoundState::PREROUND());
+		$this->past = [];
 	}
 }

@@ -22,28 +22,11 @@ use pocketmine\world\Position;
 
 class PlayerDeathEvent extends PlayerEvent {
 
-	protected string $deathMessage;
 	protected ?EntityDamageEvent $damageCause = null;
-
-	protected Position $deathPosition;
-	/** @var array<Item> */
-	protected array $drops = [];
 
 	public function __construct(Player $player) {
 		$this->player = $player;
 		$this->damageCause = $player->getLastDamageCause();
-		$this->setDeathMessage(match(true) {
-			$this->damageCause instanceof EntityDamageByEntityEvent => (($damager = $this->damageCause->getDamager()) instanceof Player ? $damager->getName() : "") . " ⚔ {$player->getName()}",
-			default => "⚔ {$player->getName()}",
-		});
-	}
-
-	public function getDeathMessage(): string {
-		return $this->deathMessage;
-	}
-
-	public function setDeathMessage(string $deathMessage): void {
-		$this->deathMessage = $deathMessage;
 	}
 
 	public function getDamageCause(): ?EntityDamageEvent {

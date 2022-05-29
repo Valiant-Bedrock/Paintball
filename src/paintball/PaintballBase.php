@@ -38,6 +38,8 @@ use paintball\game\custom\CustomPaintballGame;
 use paintball\game\PaintballGame;
 use paintball\item\PaintballKits;
 use paintball\utils\ArenaUtils;
+use paintball\utils\Column;
+use paintball\utils\Icons;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\item\VanillaItems;
@@ -137,6 +139,7 @@ class PaintballBase extends GameBase {
 				}
 				$form = new CustomSettingsForm($game);
 				$form->send($sender);
+				break;
 		}
 		return true;
 	}
@@ -145,11 +148,37 @@ class PaintballBase extends GameBase {
 	 * @return array<string>
 	 */
 	public function getScoreboardData(): array {
+		return self::formatScoreboard([
+			TextFormat::WHITE . "Active Games: " . TextFormat::YELLOW . count($this->getGameManager()->getAll())
+		]);
+	}
+
+	/**
+	 * @param array<string> $data
+	 * @return array<string>
+	 */
+	public static function formatScoreboard(array $data): array {
+		$max = max(array_map(fn(string $line) => strlen(TextFormat::clean($line)), $data)) ?: 0;
+		$outline = str_pad(string: Icons::SCOREBOARD_OUTLINE, length: (int) floor($max / 5), pad_type: STR_PAD_BOTH);
 		return [
-			0 => "------------------",
-			1 => TextFormat::WHITE . "Active Games: " . TextFormat::YELLOW . count($this->getGameManager()->getAll()),
-			2 => "------------------",
-			3 => TextFormat::YELLOW . "valiantnetwork.xyz",
+			$outline,
+			...$data,
+			$outline,
+			TextFormat::YELLOW . str_pad(string: "valiantnetwork.xyz", length: $max, pad_type: STR_PAD_BOTH),
+		];
+	}
+
+	/**
+	 * @param array<string> $data
+	 * @return array<string>
+	 */
+	public static function formatGameScoreboard(array $data): array {
+		$max = max(array_map(fn(string $line) => strlen(TextFormat::clean($line)), $data)) ?: 0;
+		return [
+			Icons::GAME_SCOREBOARD_OUTLINE,
+			...$data,
+			Icons::GAME_SCOREBOARD_OUTLINE,
+			TextFormat::YELLOW . str_pad(string: "valiantnetwork.xyz", length: $max, pad_type: STR_PAD_BOTH),
 		];
 	}
 
