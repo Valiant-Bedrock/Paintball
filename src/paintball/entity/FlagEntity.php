@@ -38,6 +38,10 @@ class FlagEntity extends Entity {
 		);
 	}
 
+	public function spawnToAll(): void {
+		parent::spawnToAll();
+	}
+
 	public function canSaveWithChunk(): bool {
 		return false;
 	}

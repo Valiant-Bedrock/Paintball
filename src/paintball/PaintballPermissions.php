@@ -22,6 +22,7 @@ use pocketmine\utils\EnumTrait;
 /**
  * @method static PaintballPermissions CREATE()
  * @method static PaintballPermissions CREATE_ARENA()
+ * @method static PaintballPermissions LOGO()
  */
 class PaintballPermissions {
 	use EnumTrait {
@@ -35,6 +36,7 @@ class PaintballPermissions {
 	protected static function setup(): void {
 		self::register(new PaintballPermissions("create", "paintball.create", "Allows the player to create a paintball game"));
 		self::register(new PaintballPermissions("create_arena", "paintball.create_arena", "Allows the player to create an arena"));
+		self::register(new PaintballPermissions("logo", "paintball.logo", "Allows the player to show the logo of the paintball game"));
 	}
 
 	protected static function register(PaintballPermissions $member, bool $addToOperatorGroup = true): void {

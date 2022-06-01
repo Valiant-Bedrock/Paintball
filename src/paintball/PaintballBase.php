@@ -14,6 +14,13 @@ declare(strict_types=1);
 namespace paintball;
 
 use Closure;
+use libcommand\Command;
+use libcommand\LibCommandBase;
+use libcommand\Overload;
+use libcommand\parameter\types\BoolParameter;
+use libcommand\parameter\types\CommandParameter;
+use libcommand\parameter\types\EquipmentSlotParameter;
+use libcommand\parameter\types\FilepathParameter;
 use libforms\buttons\Button;
 use libforms\CustomForm;
 use libforms\elements\Input;
@@ -33,12 +40,17 @@ use paintball\arena\PaintballArena;
 use paintball\arena\PaintballArenaManager;
 use paintball\command\CreateArenaCommand;
 use paintball\command\InviteCommand;
+use paintball\command\BlockCommand;
+use paintball\command\LogoCommand;
 use paintball\command\SettingsCommand;
+use paintball\command\SpawnCommand;
+use paintball\command\WorldCommand;
 use paintball\game\custom\CustomPaintballGame;
 use paintball\game\PaintballGame;
 use paintball\item\PaintballKits;
 use paintball\utils\ArenaUtils;
 use paintball\utils\Icons;
+use pocketmine\command\CommandSender;
 use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
@@ -75,6 +87,8 @@ class PaintballBase extends GameBase {
 		@mkdir($this->getServer()->getDataPath() . "worlds/" . self::GENERATED_WORLD_PATH);
 		@mkdir($this->getServer()->getDataPath() . "worlds/" . self::LOBBIES_WORLD_PATH);
 
+		LibCommandBase::register($this);
+
 		$this->scoreboardUpdate = new DeployableClosure(
 			closure: Closure::fromCallable([$this, "updateLobbyScoreboard"]),
 			scheduler: $this->getScheduler()
@@ -88,8 +102,11 @@ class PaintballBase extends GameBase {
 			fallbackPrefix: $this->getName(),
 			commands: [
 				new CreateArenaCommand($this),
+				new LogoCommand(),
 				new InviteCommand($this),
-				new SettingsCommand($this)
+				new SettingsCommand($this),
+				new SpawnCommand(),
+				new WorldCommand(),
 			]
 		);
 

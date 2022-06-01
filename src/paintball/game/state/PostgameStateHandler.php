@@ -62,6 +62,7 @@ class PostgameStateHandler extends GameStateHandler {
 
 		$game->executeOnAll(function(Player $player) {
 			$player->setGameMode(GameMode::ADVENTURE());
+			$player->getHungerManager()->setEnabled(false);
 			$player->setAllowFlight(true);
 			$player->setFlying(true);
 		});

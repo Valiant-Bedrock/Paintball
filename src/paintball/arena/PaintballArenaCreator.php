@@ -112,7 +112,7 @@ class PaintballArenaCreator implements Listener {
 					primaryButton: new Button("Confirm", function (Player $player) use($position): void {
 						$this->secondSpawnpoint = $position->asVector3();
 						$player->sendMessage(TextFormat::GREEN . "Second spawnpoint successfully set at $position");
-						$this->finish();
+						$this->setState(PaintballArenaCreatorState::SET_NAME());
 					}),
 					secondaryButton: new Button("Cancel", function (Player $player): void { $player->sendMessage(TextFormat::YELLOW . "Spawnpoint cancelled") ;})
 				);

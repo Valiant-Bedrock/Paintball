@@ -106,6 +106,7 @@ class CustomPaintballGame extends PaintballGame {
 		if($this->getState()->equals(GameState::WAITING())) {
 			$this->addUnassociatedPlayer($player);
 			$player->setGamemode(GameMode::ADVENTURE());
+			$player->getHungerManager()->setEnabled(false);
 			$player->teleport($this->getLobbyWorld()->getSpawnLocation());
 
 			$player->getNetworkSession()->sendDataPacket(GameRulesChangedPacket::create(["showCoordinates" => new BoolGameRule(true, true)]));
@@ -124,11 +125,11 @@ class CustomPaintballGame extends PaintballGame {
 	}
 
 	public function handleQuit(Player $player): void {
-		if($player === $this->leader) {
-			$this->broadcastMessage(TextFormat::YELLOW . "Deleting custom game lobby due to leader leaving...");
-			$this->finish();
-		}
 		parent::handleQuit($player);
+		if($player === $this->leader) {
+			$this->broadcastMessage(TextFormat::RED . "The custom lobby has been closed due to the host leaving the match!");
+			$this->delete();
+		}
 	}
 
 	public function setNametagData(Player $player, Team $team): void {
@@ -179,6 +180,7 @@ class CustomPaintballGame extends PaintballGame {
 
 			$player->setImmobile(false);
 			$player->setGamemode(GameMode::ADVENTURE());
+			$player->getHungerManager()->setEnabled(false);
 			// Disable flight
 			$player->setAllowFlight(false);
 			$player->setFlying(false);

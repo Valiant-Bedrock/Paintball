@@ -22,9 +22,11 @@ use libgame\kit\Kit;
 use libgame\team\member\MemberState;
 use libgame\team\Team;
 use libgame\team\TeamMode;
+use libgame\utilities\DeployableClosure;
 use paintball\arena\ArenaTime;
 use paintball\arena\PaintballArena;
 use paintball\entity\FlagEntity;
+use paintball\feed\KillFeed;
 use paintball\game\state\StartingStateHandler;
 use paintball\game\state\InGameStateHandler;
 use paintball\game\state\PostgameStateHandler;
@@ -67,10 +69,11 @@ class PaintballGame extends RoundBasedGame {
 
 
 	public const HEARTBEAT_PERIOD = 20;
-
 	public const TEAM_COUNT = 2;
-
 	public const MAX_HEALTH = 1;
+
+	protected KillFeed $killFeed;
+	protected DeployableClosure $killFeedUpdate;
 
 	protected PaintballEventHandler $eventHandler;
 
@@ -101,6 +104,10 @@ class PaintballGame extends RoundBasedGame {
 
 		$this->eventHandler = new PaintballEventHandler($this);
 		$this->eventHandler->register($plugin);
+
+		$this->killFeed = new KillFeed($this);
+		$this->killFeedUpdate = new DeployableClosure(function () { $this->killFeed->update();}, $plugin->getScheduler());
+		$this->killFeedUpdate->deploy(1);
 	}
 
 	public function getLobbyWorld(): World {
@@ -153,6 +160,7 @@ class PaintballGame extends RoundBasedGame {
 			$this->getTeamManager()->add($team);
 
 			$player->setGamemode(GameMode::ADVENTURE());
+			$player->getHungerManager()->setEnabled(false);
 			$player->teleport($this->getLobbyWorld()->getSpawnLocation());
 
 			$player->getNetworkSession()->sendDataPacket(GameRulesChangedPacket::create(["showCoordinates" => new BoolGameRule(true, true)]));
@@ -178,9 +186,8 @@ class PaintballGame extends RoundBasedGame {
 		if(($team = $this->getTeamManager()->getTeam($player)) !== null) {
 			$team->removeMember($player);
 
-			$teams = $this->getTeamManager()->getAll();
 			if($this->getState()->equals(GameState::IN_GAME()) && count($team->getOnlineMembers()) === 0) {
-				$remainingTeam = $teams[array_key_first($teams)];
+				$remainingTeam = $team === $this->getFirstTeam() ? $this->getSecondTeam() : $this->getFirstTeam();
 				$this->broadcastMessage(TextFormat::YELLOW . "All members of $team have left the match! $remainingTeam wins!");
 				$this->setState(GameState::POSTGAME());
 			}
@@ -221,25 +228,10 @@ class PaintballGame extends RoundBasedGame {
 	}
 
 	public function broadcastKillFeed(Player $victim, ?Player $killer): void {
-		$this->executeOnAll(function(Player $player) use ($victim, $killer) {
-			$victimTeam = $this->getTeamManager()->getTeam($victim) ?? throw new AssumptionFailedError("Victim should be in a team");
-			$playerTeam = $this->getTeamManager()->getTeam($player);
-			$victimColor = match(true) {
-				$playerTeam !== null => $playerTeam === $victimTeam ? TextFormat::GREEN : TextFormat::RED,
-				default => TextFormat::YELLOW
-			};
-			if($killer !== null) {
-				$killerTeam = $this->getTeamManager()->getTeam($killer) ?? throw new AssumptionFailedError("Killer should be in a team");
-				$killerColor = match(true) {
-					$playerTeam !== null => $playerTeam === $killerTeam ? TextFormat::GREEN : TextFormat::RED,
-					default => $killerTeam->getColor()
-				};
-				$player->sendActionBarMessage($killerColor . $killer->getName() . " " . Icons::DEATH . TextFormat::RESET . " " .$victimColor . $victim->getName());
-			} else {
-				$player->sendActionBarMessage(Icons::DEATH . TextFormat::RESET . " " .$victimColor . $victim->getName());
-			}
-
-		});
+		$this->killFeed->add(
+			message: $killer !== null ? "{%killer} " .Icons::DEATH . TextFormat::RESET . " {%victim}" : Icons::DEATH . TextFormat::RESET . " {%victim}",
+			participants: array_filter(["killer" => $killer, "victim" => $victim])
+		);
 	}
 
 	/**
@@ -295,6 +287,7 @@ class PaintballGame extends RoundBasedGame {
 		$player->getArmorInventory()->clearAll();
 		$player->getCursorInventory()->clearAll();
 		$player->setGamemode(GameMode::ADVENTURE());
+		$player->getHungerManager()->setEnabled(false);
 		$player->setHealth($player->getMaxHealth());
 	}
 

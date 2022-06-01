@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace paintball;
 
+use paintball\entity\FlagEntity;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerChatEvent;
@@ -33,6 +34,7 @@ class PaintballListener implements Listener {
 	}
 
 	public function handleQuit(PlayerQuitEvent $event): void {
+		$this->plugin->removeScoreboard($event->getPlayer());
 		$event->setQuitMessage("");
 	}
 
