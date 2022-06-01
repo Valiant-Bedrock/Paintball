@@ -1,0 +1,11 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Parameter \\#2 \\$parameters of class libcommand\\\\Overload constructor expects array\\<libcommand\\\\parameter\\\\Parameter\\<mixed\\>\\>, array\\{libcommand\\\\parameter\\\\types\\\\enums\\\\EnumParameter, libcommand\\\\parameter\\\\types\\\\enums\\\\EnumParameter\\} given\\.$#"
+			count: 1
+			path: src/paintball/command/LogoCommand.php
+
+		-
+			message: "#^Parameter \\#2 \\$parameters of class libcommand\\\\Overload constructor expects array\\<libcommand\\\\parameter\\\\Parameter\\<mixed\\>\\>, array\\{libcommand\\\\parameter\\\\types\\\\SubcommandParameter, libcommand\\\\parameter\\\\types\\\\StringParameter\\} given\\.$#"
+			count: 3
+			path: src/paintball/command/WorldCommand.php

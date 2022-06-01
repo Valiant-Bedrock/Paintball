@@ -58,12 +58,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:Valiant-Bedrock/libcommand.git",
-                "reference": "71562df0b8feb9fd6bd7d4a9257942eafc4dfd88"
+                "reference": "22f88310f1c356b5cedcbd3ac95b956d64e1c4da"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Valiant-Bedrock/libcommand/zipball/71562df0b8feb9fd6bd7d4a9257942eafc4dfd88",
-                "reference": "71562df0b8feb9fd6bd7d4a9257942eafc4dfd88",
+                "url": "https://api.github.com/repos/Valiant-Bedrock/libcommand/zipball/22f88310f1c356b5cedcbd3ac95b956d64e1c4da",
+                "reference": "22f88310f1c356b5cedcbd3ac95b956d64e1c4da",
                 "shasum": ""
             },
             "require": {
@@ -99,7 +99,7 @@
                 "source": "https://github.com/Valiant-Bedrock/libcommand/tree/master",
                 "issues": "https://github.com/Valiant-Bedrock/libcommand/issues"
             },
-            "time": "2022-05-30T10:04:11+00:00"
+            "time": "2022-05-30T10:11:30+00:00"
         },
         {
             "name": "valiant-bedrock/libforms",
